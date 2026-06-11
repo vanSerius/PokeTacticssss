@@ -94,10 +94,22 @@ const MOVE_VFX = {
   _poison:   { kind: "projectile", color: "#a855f7" },
 };
 
+/* Kenney-Geländetiles (CC0) – einmalig geladen */
+const TileImages = {};
+function loadTileImages() {
+  for (const key of Object.keys(TERRAIN)) {
+    if (!TERRAIN[key].img || TileImages[key]) continue;
+    const img = new Image();
+    img.src = "assets/tiles/" + TERRAIN[key].img + ".png";
+    TileImages[key] = img;
+  }
+}
+
 class IsoRenderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
+    loadTileImages();
     this.cam = { x: 0, y: 0, zoom: 1 };
     this.targetCam = null;
     this.battle = null;
@@ -285,8 +297,8 @@ class IsoRenderer {
      Attacken-Effekte (VFX)
      Jeder Effekt: Promise, gezeichnet in _draw über der Szene.
      ============================================================ */
-  _addFx(dur, drawFn) {
-    const f = { t: 0, dur, draw: drawFn, done: null };
+  _addFx(dur, drawFn, additive = true) {
+    const f = { t: 0, dur, draw: drawFn, additive, done: null };
     const p = new Promise((res) => { f.done = res; });
     this.fx.push(f);
     return p;
@@ -435,7 +447,7 @@ class IsoRenderer {
         ctx.restore();
       }
       ctx.globalAlpha = 1;
-    });
+    }, false); // fallende Objekte sind solide, kein Glow
   }
 
   /* Pulsierende Ringe (Psycho, Buffs, Status) */
@@ -720,7 +732,10 @@ class IsoRenderer {
       for (const u of b.unitsRenderAt(t.x, t.y)) this._drawUnit(u);
     }
     for (const f of this.fx) {
+      ctx.save();
+      if (f.additive) ctx.globalCompositeOperation = "lighter"; // Glow
       try { f.draw(ctx, this, Math.min(1, f.t / f.dur)); } catch (e) { /* Effekt überspringen */ }
+      ctx.restore();
     }
     this._drawParticles();
     this._drawPopups();
@@ -729,50 +744,94 @@ class IsoRenderer {
   _drawTile(x, y) {
     const ctx = this.ctx, b = this.battle;
     const hgt = b.heightAt(x, y);
-    const ter = TERRAIN[b.terrainAt(x, y)] || TERRAIN.g;
+    const terKey = b.terrainAt(x, y);
+    const ter = TERRAIN[terKey] || TERRAIN.g;
     const z = this.cam.zoom;
     const c = this._tileCenterWorld(x, y, hgt);
     const s = this.worldToScreen(c.x, c.y);
     const hw = TILE_W / 2 * z, hh = TILE_H / 2 * z;
     const hs = H_STEP * z;
+    const depth = (hgt + 1) * hs + 4 * z;     // bis zur Karten-Basis
+    const img = TileImages[terKey];
 
-    // Seitenflächen (Sockel)
-    const depth = (hgt + 1) * hs + 4 * z;
-    ctx.beginPath();
-    ctx.moveTo(s.x - hw, s.y);
-    ctx.lineTo(s.x, s.y + hh);
-    ctx.lineTo(s.x, s.y + hh + depth);
-    ctx.lineTo(s.x - hw, s.y + depth);
-    ctx.closePath();
-    ctx.fillStyle = ter.side;
-    ctx.fill();
-    ctx.beginPath();
-    ctx.moveTo(s.x + hw, s.y);
-    ctx.lineTo(s.x, s.y + hh);
-    ctx.lineTo(s.x, s.y + hh + depth);
-    ctx.lineTo(s.x + hw, s.y + depth);
-    ctx.closePath();
-    ctx.fillStyle = ter.side2;
-    ctx.fill();
-
-    // Deckfläche
-    let top = (x + y) % 2 === 0 ? ter.top : ter.top2;
-    ctx.beginPath();
-    ctx.moveTo(s.x, s.y - hh);
-    ctx.lineTo(s.x + hw, s.y);
-    ctx.lineTo(s.x, s.y + hh);
-    ctx.lineTo(s.x - hw, s.y);
-    ctx.closePath();
-    ctx.fillStyle = top;
-    ctx.fill();
-    if (ter.water) {
-      const a = 0.18 + 0.1 * Math.sin(this.time * 2.2 + x * 1.3 + y * .9);
-      ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+    if (img && img.complete && img.naturalWidth) {
+      // Kenney-Block: Bild liefert Deckfläche + obere Seiten,
+      // darunter wird der Sockel in passenden Farben verlängert.
+      const unit = TILE_W / 132;
+      const imgH = img.naturalHeight * unit * z;
+      const sideD = (img.naturalHeight - 66) * unit * z;
+      const off = ter.water ? 4 * z : 0;      // Wasser liegt etwas tiefer
+      if (depth > sideD) {
+        ctx.beginPath();
+        ctx.moveTo(s.x - hw, s.y + off + sideD - 1);
+        ctx.lineTo(s.x, s.y + hh + off + sideD - 1);
+        ctx.lineTo(s.x, s.y + hh + depth);
+        ctx.lineTo(s.x - hw, s.y + depth);
+        ctx.closePath();
+        ctx.fillStyle = ter.side;
+        ctx.fill();
+        ctx.beginPath();
+        ctx.moveTo(s.x + hw, s.y + off + sideD - 1);
+        ctx.lineTo(s.x, s.y + hh + off + sideD - 1);
+        ctx.lineTo(s.x, s.y + hh + depth);
+        ctx.lineTo(s.x + hw, s.y + depth);
+        ctx.closePath();
+        ctx.fillStyle = ter.side2;
+        ctx.fill();
+      }
+      ctx.drawImage(img, s.x - hw, s.y - hh + off, TILE_W * z, imgH);
+      if ((x + y) % 2 === 0) {
+        // dezentes Schachbrett für Lesbarkeit des Rasters
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - hh + off);
+        ctx.lineTo(s.x + hw, s.y + off);
+        ctx.lineTo(s.x, s.y + hh + off);
+        ctx.lineTo(s.x - hw, s.y + off);
+        ctx.closePath();
+        ctx.fillStyle = "rgba(20,25,50,.07)";
+        ctx.fill();
+      }
+      if (ter.water) {
+        const a = 0.10 + 0.08 * Math.sin(this.time * 2.2 + x * 1.3 + y * .9);
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - hh + off);
+        ctx.lineTo(s.x + hw, s.y + off);
+        ctx.lineTo(s.x, s.y + hh + off);
+        ctx.lineTo(s.x - hw, s.y + off);
+        ctx.closePath();
+        ctx.fillStyle = `rgba(255,255,255,${a.toFixed(3)})`;
+        ctx.fill();
+      }
+    } else {
+      // Fallback: prozedurale Flächen (falls ein Bild fehlt)
+      ctx.beginPath();
+      ctx.moveTo(s.x - hw, s.y);
+      ctx.lineTo(s.x, s.y + hh);
+      ctx.lineTo(s.x, s.y + hh + depth);
+      ctx.lineTo(s.x - hw, s.y + depth);
+      ctx.closePath();
+      ctx.fillStyle = ter.side;
       ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s.x + hw, s.y);
+      ctx.lineTo(s.x, s.y + hh);
+      ctx.lineTo(s.x, s.y + hh + depth);
+      ctx.lineTo(s.x + hw, s.y + depth);
+      ctx.closePath();
+      ctx.fillStyle = ter.side2;
+      ctx.fill();
+      ctx.beginPath();
+      ctx.moveTo(s.x, s.y - hh);
+      ctx.lineTo(s.x + hw, s.y);
+      ctx.lineTo(s.x, s.y + hh);
+      ctx.lineTo(s.x - hw, s.y);
+      ctx.closePath();
+      ctx.fillStyle = (x + y) % 2 === 0 ? ter.top : ter.top2;
+      ctx.fill();
+      ctx.strokeStyle = "rgba(0,0,0,.22)";
+      ctx.lineWidth = 1;
+      ctx.stroke();
     }
-    ctx.strokeStyle = "rgba(0,0,0,.22)";
-    ctx.lineWidth = 1;
-    ctx.stroke();
 
     // Markierungen
     const key = x + "," + y;
@@ -884,6 +943,8 @@ class IsoRenderer {
 
   _drawParticles() {
     const ctx = this.ctx;
+    ctx.save();
+    ctx.globalCompositeOperation = "lighter"; // Funken glühen
     for (const p of this.particles) {
       const s = this.worldToScreen(p.wx, p.wy);
       ctx.globalAlpha = Math.max(0, 1 - p.t / p.life);
@@ -892,7 +953,7 @@ class IsoRenderer {
       ctx.arc(s.x, s.y, p.size * this.cam.zoom, 0, Math.PI * 2);
       ctx.fill();
     }
-    ctx.globalAlpha = 1;
+    ctx.restore();
   }
 
   _drawPopups() {

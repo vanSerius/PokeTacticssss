@@ -689,17 +689,19 @@ const SPRITES = {
   },
 };
 
-/* ---------- Gelände ---------- */
+/* ---------- Gelände ----------
+   img: Kenney-Tile (CC0, kenney.nl) in assets/tiles/
+   side/side2: Sockel-Farben unter dem Tile-Bild (aus dem Bild gesampelt) */
 const TERRAIN = {
-  g: { name: "Gras",         top: "#5cb85c", top2: "#4cae4c", side: "#3e8e41", side2: "#2d6a2f" },
-  G: { name: "Dichtes Gras", top: "#3f9142", top2: "#357a38", side: "#2d6a2f", side2: "#1f4a21" },
-  d: { name: "Erde",         top: "#c89b6a", top2: "#b8895a", side: "#9a6b3f", side2: "#7a532f" },
-  s: { name: "Stein",        top: "#9aa3b2", top2: "#8a93a2", side: "#6b7280", side2: "#525a66" },
-  S: { name: "Fels",         top: "#7c8494", top2: "#6c7484", side: "#4e5564", side2: "#3a4050" },
-  w: { name: "Wasser",       top: "#3b82f6", top2: "#2563eb", side: "#1d4ed8", side2: "#1e3a8a", water: true },
-  b: { name: "Steg",         top: "#b08350", top2: "#9a7340", side: "#7a5a32", side2: "#5e4526" },
-  p: { name: "Spukstein",    top: "#6b5b95", top2: "#5b4b85", side: "#4a3d70", side2: "#382e55" },
-  P: { name: "Dunkelstein",  top: "#534578", top2: "#473a68", side: "#382e55", side2: "#2a2240" },
+  g: { name: "Gras",         img: "grass",     top: "#8cb846", top2: "#7ca340", side: "#7ca340", side2: "#5f7e30" },
+  G: { name: "Dichtes Gras", img: "grassdark", top: "#659634", top2: "#59852e", side: "#59852e", side2: "#446722" },
+  d: { name: "Erde",         img: "dirt",      top: "#ba8c5d", top2: "#a77d53", side: "#a77d53", side2: "#81603e" },
+  s: { name: "Stein",        img: "stone",     top: "#8d8d8d", top2: "#7e7e7e", side: "#e1a567", side2: "#ae7e4d" },
+  S: { name: "Fels",         img: "rock",      top: "#696969", top2: "#5e5e5e", side: "#a77d53", side2: "#81603e" },
+  w: { name: "Wasser",       img: "water",     top: "#9cd4e2", top2: "#8cc6d6", side: "#a77d53", side2: "#81603e", water: true },
+  b: { name: "Steg",         img: "bridge",    top: "#cfcabb", top2: "#bfb9a8", side: "#a77d53", side2: "#81603e" },
+  p: { name: "Spukstein",    img: "ghost",     top: "#8369b8", top2: "#755da8", side: "#d08391", side2: "#a1646c" },
+  P: { name: "Dunkelstein",  img: "ghostdark", top: "#594a78", top2: "#4d3f68", side: "#8d556b", side2: "#6d4150" },
 };
 
 /* ---------- Schlachten ---------- */
