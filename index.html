@@ -1,0 +1,157 @@
+<!DOCTYPE html>
+<html lang="de">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no, viewport-fit=cover">
+<meta name="theme-color" content="#1a1c2c">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="mobile-web-app-capable" content="yes">
+<meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+<title>PokéTactics – Taktik-Abenteuer</title>
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><circle cx='50' cy='50' r='45' fill='%23ef4444'/><rect x='5' y='48' width='90' height='6' fill='%231a1c2c'/><circle cx='50' cy='50' r='14' fill='white' stroke='%231a1c2c' stroke-width='5'/><path d='M5 50 a45 45 0 0 1 90 0 z' fill='%23ef4444'/><path d='M5 53 h90 v0 a45 45 0 0 1 -90 0 z' fill='white'/><circle cx='50' cy='50' r='14' fill='white' stroke='%231a1c2c' stroke-width='5'/></svg>">
+<link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+
+<!-- ===== TITEL ===== -->
+<div id="screen-title" class="screen active">
+  <div class="title-bg"></div>
+  <div class="title-inner">
+    <div class="title-logo">
+      <span class="logo-poke">Poké</span><span class="logo-tactics">Tactics</span>
+    </div>
+    <div class="title-sub">Ein Taktik-Abenteuer im Stil von Final Fantasy Tactics</div>
+    <canvas id="title-canvas" width="320" height="120"></canvas>
+    <div class="title-buttons">
+      <button id="btn-continue" class="btn btn-primary big hidden">▶ Weiterspielen</button>
+      <button id="btn-newgame" class="btn btn-primary big">★ Neues Spiel</button>
+      <button id="btn-howto" class="btn big">? Anleitung</button>
+    </div>
+    <div class="title-footer">Tippe & erobere das Schlachtfeld</div>
+  </div>
+</div>
+
+<!-- ===== ANLEITUNG ===== -->
+<div id="screen-howto" class="screen">
+  <div class="panel-page">
+    <h2>📖 Anleitung</h2>
+    <div class="howto-scroll">
+      <div class="howto-block"><b>⏱ Zugreihenfolge</b><br>Wie in Final Fantasy Tactics lädt jedes Pokémon seine <b>Initiative (CT)</b> mit seinem Tempo auf. Wer zuerst 100 erreicht, ist am Zug. Die Leiste oben zeigt die nächsten Züge.</div>
+      <div class="howto-block"><b>👆 Steuerung</b><br>Tippe auf <b>Bewegen</b> und dann auf ein blaues Feld. Tippe auf <b>Attacken</b>, wähle eine Attacke und dann ein Ziel – du siehst eine <b>Schadensvorschau</b>, bevor du bestätigst. Mit einem Finger ziehen = Kamera schwenken, mit zwei Fingern = zoomen.</div>
+      <div class="howto-block"><b>⛰ Höhe & Position</b><br>Wer höher steht, macht mehr Schaden. Angriffe in den <b>Rücken</b> (+25&nbsp;%) oder die <b>Flanke</b> (+10&nbsp;%) treffen härter und sicherer. Wasserfelder können nur Wasser- und Flug-Pokémon betreten.</div>
+      <div class="howto-block"><b>🔥 Typen</b><br>Das klassische Typensystem gilt: Wasser löscht Feuer, Elektro schockt Flieger … Sehr effektive Treffer machen doppelten Schaden.</div>
+      <div class="howto-block"><b>⭐ Fortschritt</b><br>Nach jedem Sieg gibt es EP. Pokémon steigen im Level auf, lernen neue Attacken und <b>entwickeln sich</b>! Neue Gefährten schließen sich nach Schlachten an. Der Fortschritt wird automatisch gespeichert.</div>
+      <div class="howto-block"><b>💫 Status</b><br><span class="st-chip st-brn">Brand</span> Schaden je Zug, weniger Angriff · <span class="st-chip st-psn">Gift</span> Schaden je Zug · <span class="st-chip st-par">Paralyse</span> langsamer, Züge können ausfallen · <span class="st-chip st-slp">Schlaf</span> handlungsunfähig, endet bei Treffern.</div>
+    </div>
+    <button id="btn-howto-back" class="btn btn-primary big">Zurück</button>
+  </div>
+</div>
+
+<!-- ===== WELTKARTE / KAPITEL ===== -->
+<div id="screen-map" class="screen">
+  <div class="panel-page">
+    <div class="map-head">
+      <h2>🗺 Feldzug</h2>
+      <button id="btn-map-title" class="btn small">⌂ Titel</button>
+    </div>
+    <div id="battle-list" class="battle-list"></div>
+    <div class="map-foot">
+      <button id="btn-roster" class="btn big">👥 Team ansehen</button>
+    </div>
+  </div>
+</div>
+
+<!-- ===== TEAM / ROSTER ===== -->
+<div id="screen-roster" class="screen">
+  <div class="panel-page">
+    <div class="map-head">
+      <h2>👥 Dein Team</h2>
+      <button id="btn-roster-back" class="btn small">← Zurück</button>
+    </div>
+    <div id="roster-list" class="roster-list"></div>
+  </div>
+</div>
+
+<!-- ===== TRUPP-AUSWAHL ===== -->
+<div id="screen-party" class="screen">
+  <div class="panel-page">
+    <div class="map-head">
+      <h2 id="party-title">Trupp wählen</h2>
+      <button id="btn-party-back" class="btn small">← Zurück</button>
+    </div>
+    <div id="party-info" class="party-info"></div>
+    <div id="party-list" class="roster-list"></div>
+    <button id="btn-party-start" class="btn btn-primary big" disabled>⚔ In die Schlacht!</button>
+  </div>
+</div>
+
+<!-- ===== KAMPF ===== -->
+<div id="screen-battle" class="screen">
+  <canvas id="battle-canvas"></canvas>
+
+  <div id="hud-top">
+    <div id="turn-order"></div>
+    <div id="hud-top-right">
+      <button id="btn-sound" class="btn icon">🔊</button>
+      <button id="btn-flee" class="btn icon">🏳</button>
+    </div>
+  </div>
+
+  <div id="banner" class="hidden"></div>
+
+  <div id="unit-card" class="hidden">
+    <canvas class="uc-sprite" width="64" height="64"></canvas>
+    <div class="uc-main">
+      <div class="uc-name"></div>
+      <div class="uc-role"></div>
+      <div class="uc-hp-row"><div class="uc-hpbar"><div class="uc-hpfill"></div></div><span class="uc-hptext"></span></div>
+      <div class="uc-stats"></div>
+      <div class="uc-status"></div>
+    </div>
+  </div>
+
+  <div id="forecast" class="hidden">
+    <div class="fc-title"></div>
+    <div class="fc-body"></div>
+  </div>
+
+  <div id="action-bar" class="hidden">
+    <div id="action-main" class="ab-row"></div>
+  </div>
+
+  <div id="skill-menu" class="hidden">
+    <div class="sm-head">Attacke wählen <button id="btn-skill-close" class="btn small">✕</button></div>
+    <div id="skill-list"></div>
+  </div>
+
+  <div id="confirm-bar" class="hidden">
+    <button id="btn-cancel" class="btn big">✕ Abbrechen</button>
+    <button id="btn-confirm" class="btn btn-primary big">✓ Bestätigen</button>
+  </div>
+
+  <div id="info-modal" class="hidden">
+    <div class="im-card">
+      <div class="im-head"><span class="im-name"></span><button id="btn-info-close" class="btn small">✕</button></div>
+      <div class="im-body"></div>
+    </div>
+  </div>
+</div>
+
+<!-- ===== ERGEBNIS ===== -->
+<div id="screen-result" class="screen">
+  <div class="panel-page result-center">
+    <h1 id="result-title"></h1>
+    <div id="result-body"></div>
+    <button id="btn-result-next" class="btn btn-primary big">Weiter</button>
+  </div>
+</div>
+
+<script src="js/data.js"></script>
+<script src="js/sprites.js"></script>
+<script src="js/audio.js"></script>
+<script src="js/render.js"></script>
+<script src="js/battle.js"></script>
+<script src="js/ui.js"></script>
+<script src="js/main.js"></script>
+</body>
+</html>
