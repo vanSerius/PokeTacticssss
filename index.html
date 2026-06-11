@@ -38,7 +38,7 @@
     <div class="howto-scroll">
       <div class="howto-block"><b>⏱ Zugreihenfolge</b><br>Wie in Final Fantasy Tactics lädt jedes Pokémon seine <b>Initiative (CT)</b> mit seinem Tempo auf. Wer zuerst 100 erreicht, ist am Zug. Die Leiste oben zeigt die nächsten Züge.</div>
       <div class="howto-block"><b>👆 Steuerung</b><br>Tippe auf <b>Bewegen</b> und dann auf ein blaues Feld. Tippe auf <b>Attacken</b>, wähle eine Attacke und dann ein Ziel – du siehst eine <b>Schadensvorschau</b>, bevor du bestätigst. Mit einem Finger ziehen = Kamera schwenken, mit zwei Fingern = zoomen.</div>
-      <div class="howto-block"><b>⛰ Höhe & Position</b><br>Wer höher steht, macht mehr Schaden. Angriffe in den <b>Rücken</b> (+25&nbsp;%) oder die <b>Flanke</b> (+10&nbsp;%) treffen härter und sicherer. Wasserfelder können nur Wasser- und Flug-Pokémon betreten.</div>
+      <div class="howto-block"><b>⛰ Höhe & Position</b><br>Wer höher steht, macht mehr Schaden. Angriffe in den <b>Rücken</b> (+25&nbsp;%) oder die <b>Flanke</b> (+10&nbsp;%) treffen härter und sicherer. Am <b>Zugende wählst du die Blickrichtung</b> – lass dem Gegner keinen freien Rücken! Wasserfelder können nur Wasser- und Flug-Pokémon betreten.</div>
       <div class="howto-block"><b>🔥 Typen</b><br>Das klassische Typensystem gilt: Wasser löscht Feuer, Elektro schockt Flieger … Sehr effektive Treffer machen doppelten Schaden.</div>
       <div class="howto-block"><b>⭐ Fortschritt</b><br>Nach jedem Sieg gibt es EP. Pokémon steigen im Level auf, lernen neue Attacken und <b>entwickeln sich</b>! Neue Gefährten schließen sich nach Schlachten an. Der Fortschritt wird automatisch gespeichert.</div>
       <div class="howto-block"><b>💫 Status</b><br><span class="st-chip st-brn">Brand</span> Schaden je Zug, weniger Angriff · <span class="st-chip st-psn">Gift</span> Schaden je Zug · <span class="st-chip st-par">Paralyse</span> langsamer, Züge können ausfallen · <span class="st-chip st-slp">Schlaf</span> handlungsunfähig, endet bei Treffern.</div>
@@ -127,6 +127,17 @@
   <div id="confirm-bar" class="hidden">
     <button id="btn-cancel" class="btn big">✕ Abbrechen</button>
     <button id="btn-confirm" class="btn btn-primary big">✓ Bestätigen</button>
+  </div>
+
+  <div id="facing-bar" class="hidden">
+    <div class="fb-label">Blickrichtung wählen</div>
+    <div class="fb-row">
+      <button class="btn fb-btn" data-fx="-1" data-fy="0">↖</button>
+      <button class="btn fb-btn" data-fx="0" data-fy="-1">↗</button>
+      <button class="btn fb-btn" data-fx="0" data-fy="1">↙</button>
+      <button class="btn fb-btn" data-fx="1" data-fy="0">↘</button>
+      <button id="btn-facing-ok" class="btn btn-primary fb-btn">✓</button>
+    </div>
   </div>
 
   <div id="info-modal" class="hidden">

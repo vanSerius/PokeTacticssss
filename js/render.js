@@ -820,9 +820,10 @@ class IsoRenderer {
     if (alpha <= 0) return;
 
     // Blickrichtung -> Front-/Rücken-Sprite + Spiegelung
+    // Gen-5-Sprites schauen nativ: vorne nach Südwest, hinten nach Nordost
     const f = u.facing || { x: 0, y: 1 };
     const side = (f.x < 0 || f.y < 0) ? "back" : "front";
-    const flip = (f.x > 0 || f.y < 0);
+    const flip = f.x !== 0; // SE (+x) und NW (-x) brauchen Spiegelung
 
     // Schatten + Team-Ring
     ctx.save();

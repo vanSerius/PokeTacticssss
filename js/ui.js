@@ -232,7 +232,7 @@ const BattleUI = (() => {
         moved, acted,
         onMove: startMove,
         onAttack: openSkillMenu,
-        onWait: finish,
+        onWait: startFacing,
       });
 
       function setIdle() {
@@ -242,18 +242,49 @@ const BattleUI = (() => {
         if (battle.checkEnd()) { finish(); return; }
         showUnitCard(u);
         refreshBar();
-        if (moved && acted) finish();
+        if (moved && acted) startFacing();
       }
 
       function finish() {
         clearMarks();
         hideActionBar();
         hideConfirm();
+        $("#facing-bar").classList.add("hidden");
         renderer.onTap = null;
         abortPlayerTurn = null;
         resolve({ moved, acted });
       }
       abortPlayerTurn = finish;
+
+      /* --- Blickrichtung am Zugende wählen (wie in FFT) --- */
+      function startFacing() {
+        if (battle.checkEnd()) { finish(); return; }
+        mode = "facing";
+        clearMarks();
+        hideActionBar();
+        hideConfirm();
+        showUnitCard(u);
+        renderer.centerOnTile(u.x, u.y);
+        const bar = $("#facing-bar");
+        bar.classList.remove("hidden");
+        const markActive = () => {
+          bar.querySelectorAll(".fb-btn[data-fx]").forEach((b) => {
+            const isActive = u.facing &&
+              u.facing.x === parseInt(b.dataset.fx, 10) &&
+              u.facing.y === parseInt(b.dataset.fy, 10);
+            b.classList.toggle("active", isActive);
+          });
+        };
+        bar.querySelectorAll(".fb-btn[data-fx]").forEach((b) => {
+          b.onclick = () => {
+            Sfx.tap();
+            u.facing = { x: parseInt(b.dataset.fx, 10), y: parseInt(b.dataset.fy, 10) };
+            markActive();
+          };
+        });
+        markActive();
+        $("#btn-facing-ok").onclick = () => { Sfx.select(); finish(); };
+      }
 
       function hideConfirm() { $("#confirm-bar").classList.add("hidden"); }
       function showConfirm() { $("#confirm-bar").classList.remove("hidden"); hideActionBar(); }
@@ -413,6 +444,18 @@ const BattleUI = (() => {
         if (!tile) return;
         if (mode === "busy") return;
         Sfx.tap();
+        if (mode === "facing") {
+          // Tipp auf ein Feld: dorthin schauen
+          if (tile.x !== u.x || tile.y !== u.y) {
+            battle.setFacingTowards(u, tile.x, tile.y);
+            $("#facing-bar").querySelectorAll(".fb-btn[data-fx]").forEach((b) => {
+              b.classList.toggle("active",
+                u.facing.x === parseInt(b.dataset.fx, 10) &&
+                u.facing.y === parseInt(b.dataset.fy, 10));
+            });
+          }
+          return;
+        }
         if (mode === "move" || mode === "move-confirm") {
           const ok = reach.tiles.some((t) => t.x === tile.x && t.y === tile.y);
           if (ok) previewMove(tile);
@@ -466,6 +509,16 @@ const BattleUI = (() => {
       acted = true;
     }
     if (!moved && !acted) await renderer.wait(300);
+    // Zugende: zum nächsten Spieler ausrichten (kein freier Rücken)
+    const foes = battle.alive(0);
+    if (u.alive && foes.length) {
+      let nf = foes[0], bd = Infinity;
+      for (const f of foes) {
+        const d = Math.abs(f.x - u.x) + Math.abs(f.y - u.y);
+        if (d < bd) { bd = d; nf = f; }
+      }
+      battle.setFacingTowards(u, nf.x, nf.y);
+    }
     return { moved, acted };
   }
 
