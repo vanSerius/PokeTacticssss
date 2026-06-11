@@ -55,9 +55,8 @@ function startTitleCanvas() {
       ctx.fill();
     }
     heroes.forEach((sp, i) => {
-      const img = SpriteCache.get(sp);
       const bob = Math.sin(t * 2 + i) * 4;
-      ctx.drawImage(img, 8 + i * 62, 40 + bob, 48, 48);
+      SpriteCache.draw(ctx, sp, 4 + i * 62, 34 + bob, 56, 56);
     });
     requestAnimationFrame(frame);
   }
@@ -202,6 +201,7 @@ async function startBattle() {
 
 /* ---------- Init ---------- */
 function init() {
+  SpriteCache.preloadAll();
   BattleUI.init();
   Game.save = loadSave();
   if (Game.save) $("#btn-continue").classList.remove("hidden");

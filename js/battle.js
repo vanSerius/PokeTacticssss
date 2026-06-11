@@ -18,7 +18,7 @@ function makeUnit(spId, lvl, team, x, y, boss = false) {
     maxHp: st(0), hp: st(0),
     atk: st(1), def: st(2), spd: sp.base[3],
     mov: sp.mov, jmp: sp.jmp, fly: !!sp.fly, swim: !!sp.swim,
-    x, y, rx: x, ry: y, hop: 0, flip: team === 1,
+    x, y, rx: x, ry: y, hop: 0, facing: { x: 0, y: 1 },
     ct: Math.floor(Math.random() * 25),
     moves: moves.map((id) => ({ id, pp: MOVES[id].pp })),
     statuses: [], buffs: [],
@@ -45,6 +45,17 @@ class Battle {
     }
     this.active = null;
     this.round = 0;
+    // Anfangs-Blickrichtung: zum nächsten Feind
+    for (const u of this.units) {
+      const foes = this.alive(u.team === 0 ? 1 : 0);
+      if (!foes.length) continue;
+      let nf = foes[0], bd = Infinity;
+      for (const f of foes) {
+        const d = Math.abs(f.x - u.x) + Math.abs(f.y - u.y);
+        if (d < bd) { bd = d; nf = f; }
+      }
+      this.setFacingTowards(u, nf.x, nf.y);
+    }
   }
 
   heightAt(x, y) {
@@ -244,9 +255,9 @@ class Battle {
   facingOf(u) { return u.facing || { x: 1, y: 0 }; }
   setFacingTowards(u, tx, ty) {
     const dx = tx - u.x, dy = ty - u.y;
+    if (dx === 0 && dy === 0) return;
     if (Math.abs(dx) >= Math.abs(dy)) u.facing = { x: Math.sign(dx) || 1, y: 0 };
     else u.facing = { x: 0, y: Math.sign(dy) };
-    u.flip = (u.facing.x < 0 || u.facing.y > 0);
   }
   /* 'back' | 'side' | 'front' aus Sicht des Verteidigers */
   attackDirection(attacker, defender) {

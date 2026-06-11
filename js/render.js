@@ -242,8 +242,10 @@ class IsoRenderer {
           u.rx = p.x + (q.x - p.x) * f;
           u.ry = p.y + (q.y - p.y) * f;
           u.hop = Math.sin(f * Math.PI) * 8;
-          if (q.x > p.x || q.y < p.y) u.flip = false;
-          if (q.x < p.x || q.y > p.y) u.flip = true;
+          if (q.x > p.x) u.facing = { x: 1, y: 0 };
+          else if (q.x < p.x) u.facing = { x: -1, y: 0 };
+          else if (q.y > p.y) u.facing = { x: 0, y: 1 };
+          else if (q.y < p.y) u.facing = { x: 0, y: -1 };
         }
       } else if (a.type === "lunge") {
         a.t += dt * 4.5;
@@ -389,51 +391,52 @@ class IsoRenderer {
     // Höhe interpolieren
     const h0 = b.heightAt(Math.round(tx), Math.round(ty));
     const c = this._tileCenterWorld(tx, ty, h0);
-    const s = this.worldToScreen(c.x, c.y - (u.hop || 0));
-    const size = 44 * z * (SPECIES[u.species].scale || 1) * (u.boss ? 1.18 : 1);
+    const ground = this.worldToScreen(c.x, c.y);   // Fußpunkt auf der Kachel
+    const size = 52 * z * (SPECIES[u.species].scale || 1) * (u.boss ? 1.15 : 1);
     const alpha = u.alpha !== undefined ? u.alpha : 1;
     if (alpha <= 0) return;
+
+    // Blickrichtung -> Front-/Rücken-Sprite + Spiegelung
+    const f = u.facing || { x: 0, y: 1 };
+    const side = (f.x < 0 || f.y < 0) ? "back" : "front";
+    const flip = (f.x > 0 || f.y < 0);
 
     // Schatten + Team-Ring
     ctx.save();
     ctx.globalAlpha = alpha;
     ctx.beginPath();
-    ctx.ellipse(s.x, this.worldToScreen(c.x, c.y).y + 2, size * .32, size * .14, 0, 0, Math.PI * 2);
+    ctx.ellipse(ground.x, ground.y + 2, size * .3, size * .13, 0, 0, Math.PI * 2);
     ctx.fillStyle = "rgba(0,0,0,.35)";
     ctx.fill();
     ctx.beginPath();
-    ctx.ellipse(s.x, this.worldToScreen(c.x, c.y).y + 2, size * .36, size * .16, 0, 0, Math.PI * 2);
+    ctx.ellipse(ground.x, ground.y + 2, size * .34, size * .15, 0, 0, Math.PI * 2);
     ctx.strokeStyle = u.team === 0 ? "rgba(80,160,255,.85)" : "rgba(239,68,68,.85)";
     ctx.lineWidth = 2.4 * z;
     ctx.stroke();
+
+    // Sprite (unten verankert, hüpft bei Bewegung/aktivem Zug)
+    const idleBob = b.active === u ? Math.sin(this.time * 4) * 2 * z : 0;
+    const footY = ground.y + 3 * z - (u.hop || 0) * z + idleBob;
+    if (u.flash) ctx.globalAlpha = alpha * .35;
+    const { dh } = SpriteCache.draw(ctx, u.species, ground.x - size / 2, footY - size, size, size, side, flip);
+    ctx.globalAlpha = alpha;
+    const topY = footY - dh;
 
     // Aktiver-Marker
     if (b.active === u) {
       const bob = Math.sin(this.time * 5) * 4 * z;
       ctx.beginPath();
-      ctx.moveTo(s.x, s.y - size - 14 * z + bob);
-      ctx.lineTo(s.x - 7 * z, s.y - size - 24 * z + bob);
-      ctx.lineTo(s.x + 7 * z, s.y - size - 24 * z + bob);
+      ctx.moveTo(ground.x, topY - 16 * z + bob);
+      ctx.lineTo(ground.x - 7 * z, topY - 26 * z + bob);
+      ctx.lineTo(ground.x + 7 * z, topY - 26 * z + bob);
       ctx.closePath();
       ctx.fillStyle = "#ffcb05";
       ctx.fill();
     }
 
-    // Sprite
-    const img = SpriteCache.get(u.species);
-    const idleBob = b.active === u ? Math.sin(this.time * 4) * 2 * z : 0;
-    ctx.imageSmoothingEnabled = false;
-    if (u.flash) ctx.globalAlpha = alpha * .35;
-    ctx.save();
-    ctx.translate(s.x, s.y - size / 2 - 4 * z + idleBob);
-    if (u.flip) ctx.scale(-1, 1);
-    ctx.drawImage(img, -size / 2, -size / 2, size, size);
-    ctx.restore();
-    ctx.globalAlpha = alpha;
-
     // KP-Balken
     const bw = 34 * z;
-    const bx = s.x - bw / 2, by = s.y - size - 8 * z;
+    const bx = ground.x - bw / 2, by = topY - 9 * z;
     ctx.fillStyle = "rgba(0,0,0,.55)";
     ctx.fillRect(bx - 1, by - 1, bw + 2, 5 * z + 2);
     const r = Math.max(0, u.hp / u.maxHp);
@@ -445,12 +448,12 @@ class IsoRenderer {
       ctx.font = `${Math.round(11 * z)}px sans-serif`;
       ctx.textAlign = "center";
       const icons = u.statuses.map((st) => STATUS[st.id].icon).join("");
-      ctx.fillText(icons, s.x, by - 4 * z);
+      ctx.fillText(icons, ground.x, by - 4 * z);
     }
     if (u.boss) {
       ctx.font = `${Math.round(13 * z)}px sans-serif`;
       ctx.textAlign = "center";
-      ctx.fillText("👑", s.x + bw / 2 + 8 * z, by + 4 * z);
+      ctx.fillText("👑", ground.x + bw / 2 + 8 * z, by + 4 * z);
     }
     ctx.restore();
   }

@@ -13,7 +13,8 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Kampagne mit 7 Schlachten** inkl. Bosskämpfen (Onix, Rivalen-Team, Mewtu als Finale)
 - **Fortschrittssystem**: EP, Level-Ups, neue Attacken, **Entwicklungen** (Glumanda → Glutexo …) und Rekruten nach jedem Sieg
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
-- **Pixel-Art-Sprites, Soundeffekte (WebAudio) und Vibration** – alles ohne externe Assets
+- **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback
+- **Soundeffekte (WebAudio) und Vibration** – ohne Audio-Dateien
 - **Auto-Save** im Browser (localStorage)
 
 ## 🚀 Spielen
@@ -50,5 +51,11 @@ js/battle.js      – Kampflogik: CT-System, Wegfindung, Schaden, KI
 js/ui.js          – Kampf-UI & Ablaufsteuerung
 js/main.js        – Kampagne, Speicherstand, Bildschirm-Flows
 ```
+
+```
+assets/sprites/    – Gen-5-Sprites aus dem PokeAPI/sprites-Repository
+```
+
+> Hinweis: Dies ist ein nicht-kommerzielles Fanprojekt. Pokémon und alle Sprites sind © Nintendo / Game Freak / The Pokémon Company.
 
 Viel Spaß auf dem Schlachtfeld! 🏆
