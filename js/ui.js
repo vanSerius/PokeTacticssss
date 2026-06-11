@@ -110,13 +110,27 @@ const BattleUI = (() => {
     for (const t of tiles) renderer.highlights.set(t.x + "," + t.y, kind);
   }
 
-  function vibrate(ms) { if (navigator.vibrate) navigator.vibrate(ms); }
+  function vibrate(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+
+  /* Watchdog: keine Animation darf das Spiel je blockieren */
+  function withTimeout(promise, ms) {
+    return Promise.race([promise, new Promise((r) => setTimeout(r, ms))]);
+  }
 
   /* ---------- Ereignisse animieren ---------- */
   async function playEvents(events) {
     for (const ev of events) {
-      const u = ev.unit;
-      switch (ev.type) {
+      try {
+        await playOneEvent(ev);
+      } catch (e) {
+        console.error("Ereignis-Animation übersprungen:", e);
+      }
+    }
+  }
+
+  async function playOneEvent(ev) {
+    const u = ev.unit;
+    switch (ev.type) {
         case "dmg": {
           renderer.centerOnTile(u.x, u.y);
           if (ev.crit) { Sfx.crit(); renderer.shake(9); vibrate(40); }
@@ -127,7 +141,7 @@ const BattleUI = (() => {
           if (ev.mult >= 2) renderer.addPopup(u.x, u.y - 0.0001, "Sehr effektiv!", "#4ade80");
           else if (ev.mult > 0 && ev.mult < 1) renderer.addPopup(u.x, u.y, "Wenig effektiv …", "#a9a8c0");
           if (ev.dir === "back") renderer.addPopup(u.x, u.y, "Rückenangriff!", "#ffb03a");
-          await renderer.animFlash(u);
+          await withTimeout(renderer.animFlash(u), 1200);
           showUnitCard(battle.active);
           break;
         }
@@ -176,12 +190,14 @@ const BattleUI = (() => {
           break;
         case "ko":
           Sfx.ko();
+          renderer.shake(7);
           renderer.addPopup(u.x, u.y, "K.O.!", "#ef4444", true);
-          await renderer.animKO(u);
+          renderer.riseBurst(u.x, u.y, "#e2e8f0", 14);
+          renderer.fxRing({ x: u.x, y: u.y }, { color: "#94a3b8", dur: .7, rings: 2 });
+          await withTimeout(renderer.animKO(u), 2200);
           updateTurnOrder();
           break;
       }
-    }
   }
 
   /* ---------- Aktionsleiste ---------- */
@@ -271,7 +287,7 @@ const BattleUI = (() => {
         clearMarks();
         hideConfirm();
         Sfx.move();
-        await renderer.animMove(u, pendingPath);
+        await withTimeout(renderer.animMove(u, pendingPath), pendingPath.length * 250 + 1500);
         u.x = pendingTile.x; u.y = pendingTile.y;
         u.rx = u.x; u.ry = u.y;
         // automatisch zum nächsten Gegner ausrichten
@@ -381,10 +397,10 @@ const BattleUI = (() => {
         battle.setFacingTowards(u, pendingTile.x, pendingTile.y);
         const m = MOVES[currentMove.id];
         renderer.centerOnTile(pendingTile.x, pendingTile.y);
-        await renderer.animLunge(u, pendingTile.x, pendingTile.y);
-        const tColor = TYPES[m.type].color;
-        for (const t of battle.aoeTiles(currentMove, pendingTile.x, pendingTile.y))
-          renderer.burst(t.x, t.y, tColor, 7);
+        const melee = m.cat === "p" && m.rng <= 1;
+        await withTimeout(renderer.animLunge(u, pendingTile.x, pendingTile.y, melee ? .4 : .15), 1200);
+        const aoe = battle.aoeTiles(currentMove, pendingTile.x, pendingTile.y);
+        await withTimeout(renderer.animAttackFx(currentMove.id, { x: u.x, y: u.y }, pendingTile, aoe), 3000);
         const events = battle.resolveAttack(u, currentMove, pendingTile.x, pendingTile.y);
         await playEvents(events);
         acted = true;
@@ -429,7 +445,7 @@ const BattleUI = (() => {
     let moved = false, acted = false;
     if (decision.path && decision.path.length > 1) {
       Sfx.move();
-      await renderer.animMove(u, decision.path);
+      await withTimeout(renderer.animMove(u, decision.path), decision.path.length * 250 + 1500);
       const last = decision.path[decision.path.length - 1];
       u.x = last.x; u.y = last.y; u.rx = u.x; u.ry = u.y;
       moved = true;
@@ -441,9 +457,10 @@ const BattleUI = (() => {
       const m = MOVES[mv.id];
       battle.setFacingTowards(u, decision.action.x, decision.action.y);
       renderer.centerOnTile(decision.action.x, decision.action.y);
-      await renderer.animLunge(u, decision.action.x, decision.action.y);
-      for (const t of battle.aoeTiles(mv, decision.action.x, decision.action.y))
-        renderer.burst(t.x, t.y, TYPES[m.type].color, 7);
+      const melee = m.cat === "p" && m.rng <= 1;
+      await withTimeout(renderer.animLunge(u, decision.action.x, decision.action.y, melee ? .4 : .15), 1200);
+      const aoe = battle.aoeTiles(mv, decision.action.x, decision.action.y);
+      await withTimeout(renderer.animAttackFx(mv.id, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 3000);
       const events = battle.resolveAttack(u, mv, decision.action.x, decision.action.y);
       await playEvents(events);
       acted = true;
@@ -498,12 +515,19 @@ const BattleUI = (() => {
 
       let moved = false, acted = false;
       if (u.alive && !sot.skip) {
-        if (u.team === 0) {
-          const r = await playerTurn(u);
-          moved = r.moved; acted = r.acted;
-        } else {
-          const r = await enemyTurn(u);
-          moved = r.moved; acted = r.acted;
+        try {
+          if (u.team === 0) {
+            const r = await playerTurn(u);
+            moved = r.moved; acted = r.acted;
+          } else {
+            const r = await enemyTurn(u);
+            moved = r.moved; acted = r.acted;
+          }
+        } catch (e) {
+          // Ein Fehler in einem Zug darf die Schlacht nie anhalten
+          console.error("Zug-Fehler, Zug wird beendet:", e);
+          hideActionBar();
+          clearMarks();
         }
       }
       if (fled) { result = 3; break; }
