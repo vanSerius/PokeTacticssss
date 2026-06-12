@@ -10,6 +10,8 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Klassisches Typensystem**: Wasser löscht Feuer, Elektro schockt Flieger, Geister sind immun gegen normale Hiebe
 - **Mana-System**: Attacken kosten 2–6 Mana (Hieb gratis), +2 Regeneration pro Runde – starke Attacken wollen getimt sein
 - **Lebendige Karten**: Tag/Nacht-Stimmungen, Regen & Gewitter, wiegende Bäume, Blätter, Glühwisps, Schmetterlinge, Lauf-Staub
+- **Musik & Sound**: eigener Chiptune-Sequencer (3 Themes: Menü, Kampf, Spuk), echte CC0-Soundeffekte (Kenney) und Sieg-/Boss-Jingles (Beatscribe)
+- **Einstellungen**: Musik-/Effekt-Lautstärke, Vibration, schnelle Animationen, Spielstand-Reset
 - **Flanken- & Rückenangriffe** (+10 % / +25 % Schaden), Flächenattacken mit Friendly Fire
 - **Status-Effekte**: Brand, Gift, Paralyse, Schlaf – plus Buffs & Debuffs
 - **Roguelike-Runs**: Starter-Wahl (1 aus 3), nach jedem Sieg Rekruten-Wahl (1 aus 2 oder ablehnen für EP), bei jedem Level-Up 1 aus 3 Verbesserungs-Karten (neue Attacke, +KP/ANG/VER/Tempo/Bewegung)

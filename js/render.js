@@ -748,6 +748,7 @@ class IsoRenderer {
     await Promise.all(jobs);
   }
   animMove(unit, path, stepMs = 170) {
+    if (Settings.data.fast) stepMs *= .65;
     return new Promise((res) => {
       // sofort in Laufrichtung schauen, nicht erst nach dem ersten Frame
       if (path.length > 1) this._faceStep(unit, path[0], path[1]);
@@ -775,7 +776,7 @@ class IsoRenderer {
       unit.anim = { type: "ko", t: 0, done: res };
     });
   }
-  wait(ms) { return new Promise((r) => setTimeout(r, ms)); }
+  wait(ms) { return new Promise((r) => setTimeout(r, ms * (Settings.data.fast ? .55 : 1))); }
 
   /* ---------- Render-Loop ----------
      Wichtig: rAF wird ZUERST geplant und alles in try/catch gekapselt –

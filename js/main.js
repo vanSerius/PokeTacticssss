@@ -433,7 +433,7 @@ function playEvolutionAnim(fromSp, toSp) {
     const silFrom = silhouette(fromSp);
     const silTo = silhouette(toSp);
 
-    let t = 0, last = performance.now(), done = false, sparks = [];
+    let t = 0, last = performance.now(), done = false, sparks = [], revealed = false;
     function finish() {
       if (done) return;
       done = true;
@@ -487,7 +487,7 @@ function playEvolutionAnim(fromSp, toSp) {
         ctx.fillRect(0, 0, W, H);
       } else {
         // Phase 4: Enthüllung + Funken
-        if (t < 3.45) Sfx.levelup();
+        if (!revealed) { revealed = true; Sfx.reveal(); }
         $("#evo-text").textContent = `🎉 ${SPECIES[toSp].name}!`;
         SpriteCache.draw(ctx, toSp, W * .15, H * .15, W * .7, H * .7);
         ctx.save();
@@ -530,6 +530,7 @@ async function runRecruitChoice(levelups) {
   if (i === -1) {
     for (const e of run.roster) awardExp(e, 25, levelups);
   } else {
+    Sfx.treasure();
     run.roster.push(offers[i]);
   }
   writeSave();
@@ -667,7 +668,7 @@ async function eventShop() {
     const used = await item.use();
     if (used) {
       run.coins -= item.price;
-      Sfx.levelup();
+      Sfx.coins();
       writeSave();
     }
   }
@@ -776,6 +777,7 @@ async function startBattle() {
         Game.save.best.wins++;
         Game.save.run = null;
         writeSave();
+        Sfx.champion();
         $("#result-title").textContent = "👑 CHAMPION!";
         $("#result-title").className = "win";
         $("#result-body").innerHTML = `<div class="res-line evo">Du hast den Run gemeistert – Champion-Sieg Nr. <b>${Game.save.best.wins}</b>!<br>Starte einen neuen Run mit anderem Starter und anderen Karten.</div>`;
@@ -847,6 +849,36 @@ function init() {
     showScreen("#screen-map");
   });
   $("#btn-howto").addEventListener("click", () => { Sfx.tap(); showScreen("#screen-howto"); });
+  // --- Einstellungen ---
+  let settingsReturn = "#screen-title";
+  const openSettings = (from) => {
+    settingsReturn = from;
+    $("#set-music").value = Math.round(Settings.data.music * 100);
+    $("#set-sfx").value = Math.round(Settings.data.sfx * 100);
+    $("#set-vibration").checked = Settings.data.vibration;
+    $("#set-fast").checked = Settings.data.fast;
+    showScreen("#screen-settings");
+  };
+  $("#btn-settings").addEventListener("click", () => { Sfx.tap(); openSettings("#screen-title"); });
+  $("#btn-map-settings").addEventListener("click", () => { Sfx.tap(); openSettings("#screen-map"); });
+  $("#btn-settings-back").addEventListener("click", () => { Sfx.select(); showScreen(settingsReturn); });
+  $("#set-music").addEventListener("input", (e) => Settings.set("music", e.target.value / 100));
+  $("#set-sfx").addEventListener("change", (e) => { Settings.set("sfx", e.target.value / 100); Sfx.select(); });
+  $("#set-vibration").addEventListener("change", (e) => {
+    Settings.set("vibration", e.target.checked);
+    if (e.target.checked && navigator.vibrate) navigator.vibrate(30);
+  });
+  $("#set-fast").addEventListener("change", (e) => Settings.set("fast", e.target.checked));
+  $("#btn-wipe").addEventListener("click", () => {
+    if (!confirm("Wirklich ALLES löschen (Run + Rekorde)?")) return;
+    try { localStorage.removeItem(SAVE_KEY); } catch (err) {}
+    Game.save = null;
+    ensureSave();
+    writeSave();
+    updateTitle();
+    Sfx.cancel();
+    showScreen("#screen-title");
+  });
   $("#btn-howto-back").addEventListener("click", () => { Sfx.tap(); showScreen("#screen-title"); });
   $("#btn-map-title").addEventListener("click", () => {
     Sfx.tap();

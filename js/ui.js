@@ -13,6 +13,11 @@ function typeChipHtml(t) {
 function showScreen(id) {
   document.querySelectorAll(".screen").forEach((s) => s.classList.remove("active"));
   $(id).classList.add("active");
+  // Hintergrundmusik je Bereich
+  if (typeof Music !== "undefined") {
+    if (id === "#screen-battle") Music.play(Music.battleTheme || "battle");
+    else Music.play("title");
+  }
 }
 
 /* ============================================================
@@ -111,7 +116,7 @@ const BattleUI = (() => {
     for (const t of tiles) renderer.highlights.set(t.x + "," + t.y, kind);
   }
 
-  function vibrate(ms) { try { if (navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
+  function vibrate(ms) { try { if (Settings.data.vibration && navigator.vibrate) navigator.vibrate(ms); } catch (e) {} }
 
   /* Watchdog: keine Animation darf das Spiel je blockieren */
   function withTimeout(promise, ms) {
@@ -530,6 +535,7 @@ const BattleUI = (() => {
 
   /* ---------- Hauptschleife ---------- */
   async function run(def, partyEntries, enemyState = null) {
+    Music.battleTheme = (def.ambient === "ghost" || def.ambient === "citadel") ? "dark" : "battle";
     battle = new Battle(def, partyEntries, enemyState);
     showScreen("#screen-battle");
     renderer.resize();          // Canvas war evtl. unsichtbar (Größe 0)
@@ -546,12 +552,15 @@ const BattleUI = (() => {
         if (abortPlayerTurn) abortPlayerTurn();
       }
     };
+    $("#btn-sound").textContent = Sfx.muted ? "🔇" : "🔊";
     $("#btn-sound").onclick = () => {
       const m = Sfx.toggle();
       $("#btn-sound").textContent = m ? "🔇" : "🔊";
     };
     $("#btn-info-close").onclick = () => $("#info-modal").classList.add("hidden");
 
+    if (def.id === BATTLES.length - 1) Sfx.boss();
+    else Sfx.battlestart();
     await banner(`${def.icon} ${def.name}`, 1100);
     await banner(def.intro, 1700);
 

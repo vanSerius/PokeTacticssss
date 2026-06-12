@@ -26,6 +26,7 @@
       <button id="btn-continue" class="btn btn-primary big hidden">▶ Run fortsetzen</button>
       <button id="btn-newgame" class="btn btn-primary big">🎲 Neuer Run</button>
       <button id="btn-howto" class="btn big">? Anleitung</button>
+      <button id="btn-settings" class="btn big">⚙ Einstellungen</button>
     </div>
     <div id="title-record" class="title-record hidden"></div>
     <div class="title-footer">Jeder Run ist anders – wie weit kommst du?</div>
@@ -52,12 +53,52 @@
   </div>
 </div>
 
+<!-- ===== EINSTELLUNGEN ===== -->
+<div id="screen-settings" class="screen">
+  <div class="panel-page">
+    <div class="map-head">
+      <h2>⚙ Einstellungen</h2>
+      <button id="btn-settings-back" class="btn small">← Zurück</button>
+    </div>
+    <div class="settings-scroll">
+      <div class="set-row">
+        <div class="set-label">🎵 Musik</div>
+        <input type="range" id="set-music" min="0" max="100" step="5">
+      </div>
+      <div class="set-row">
+        <div class="set-label">🔊 Soundeffekte</div>
+        <input type="range" id="set-sfx" min="0" max="100" step="5">
+      </div>
+      <div class="set-row set-toggle">
+        <div class="set-label">📳 Vibration</div>
+        <label class="switch"><input type="checkbox" id="set-vibration"><span class="slider"></span></label>
+      </div>
+      <div class="set-row set-toggle">
+        <div class="set-label">⏩ Schnelle Animationen</div>
+        <label class="switch"><input type="checkbox" id="set-fast"><span class="slider"></span></label>
+      </div>
+      <button id="btn-wipe" class="btn btn-danger big">🗑 Spielstand & Rekorde löschen</button>
+      <div class="credits">
+        <b>Credits</b><br>
+        Pokémon-Sprites: © Nintendo/Game Freak (via PokeAPI/sprites, Fanprojekt)<br>
+        Gelände: Kenney „Isometric Landscape" (CC0) · kenney.nl<br>
+        Effekte: Foozle „Pixel Magic Effects" (CC0) · foozlecc.itch.io<br>
+        Sounds: Kenney Audio (CC0) · Jingles: Beatscribe (CC0)<br>
+        Musik: eigener Chiptune-Sequencer
+      </div>
+    </div>
+  </div>
+</div>
+
 <!-- ===== WELTKARTE / KAPITEL ===== -->
 <div id="screen-map" class="screen">
   <div class="panel-page">
     <div class="map-head">
       <h2>🗺 Feldzug</h2>
-      <button id="btn-map-title" class="btn small">⌂ Titel</button>
+      <div style="display:flex;gap:6px">
+        <button id="btn-map-settings" class="btn small">⚙</button>
+        <button id="btn-map-title" class="btn small">⌂ Titel</button>
+      </div>
     </div>
     <div id="battle-list" class="battle-list"></div>
     <div class="map-foot">
