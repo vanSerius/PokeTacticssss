@@ -649,16 +649,17 @@ class IsoRenderer {
     const spec = MOVE_VFX[moveId] || MOVE_VFX["_" + m.type] ||
       (m.cat === "p" ? { kind: "slash" } : m.rng > 1 ? { kind: "projectile" } : { kind: "ring" });
     const o = { color, ...spec };
-    const sfxByKind = {
-      beam: "beam", "beam+ring": "beam", drainbeam: "beam", geyserbeam: "beam",
-      projectile: "whoosh", "projectile+ring": "whoosh", fall: "whoosh", slash: "whoosh",
-      fireproj: "whoosh", waterproj: "whoosh", windproj: "whoosh", tornadofx: "whoosh",
-      ghostball: "whoosh", rockthrow: "whoosh",
-      bolt: "zap", quake: "rumble", explosionfx: "rumble", earthspike: "rumble", rocksfx: "rumble",
-      ring: "chime", rise: "chime", portalfx: "chime",
-    };
-    const sfx = sfxByKind[spec.kind];
-    if (sfx && typeof Sfx !== "undefined" && Sfx[sfx]) Sfx[sfx]();
+    // Sound: Element der Attacke klingt nach Element –
+    // Strom knistert, Feuer faucht, Wasser blubbert …
+    if (typeof Sfx !== "undefined") {
+      if (m.heal || (m.cat === "s" && m.target !== "foe")) {
+        Sfx.chime(); // Heilung & Stärkungen schimmern
+      } else {
+        const big = m.pow >= 70 || ["quake", "geyserbeam", "earthspike", "explosionfx"].includes(spec.kind);
+        Sfx.element(m.type, big);
+        if (spec.kind === "explosionfx" || spec.kind === "quake") Sfx.rumble();
+      }
+    }
     const jobs = [];
     switch (spec.kind) {
       case "beam":

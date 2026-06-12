@@ -137,10 +137,115 @@ const Sfx = (() => {
   }
   const S = (name, vol, rate) => playSample(name, vol, rate);
 
+  /* --- Elementar-Synthese: gefiltertes Rauschen --- */
+  function noiseShaped({ dur = .4, vol = .1, delay = 0, type = "lowpass", f0 = 800, f1 = null, q = 1, attack = .01 }) {
+    const c = audioCtx();
+    const g = ensureGain();
+    if (!c || !g) return;
+    const t0 = c.currentTime + delay;
+    const len = Math.floor(c.sampleRate * dur);
+    const buf = c.createBuffer(1, len, c.sampleRate);
+    const d = buf.getChannelData(0);
+    for (let i = 0; i < len; i++) d[i] = Math.random() * 2 - 1;
+    const src = c.createBufferSource();
+    src.buffer = buf;
+    const filt = c.createBiquadFilter();
+    filt.type = type;
+    filt.frequency.setValueAtTime(f0, t0);
+    if (f1 !== null) filt.frequency.exponentialRampToValueAtTime(Math.max(40, f1), t0 + dur);
+    filt.Q.value = q;
+    const vg = c.createGain();
+    vg.gain.setValueAtTime(0.001, t0);
+    vg.gain.linearRampToValueAtTime(vol, t0 + attack);
+    vg.gain.exponentialRampToValueAtTime(0.001, t0 + dur);
+    src.connect(filt).connect(vg).connect(g);
+    src.start(t0);
+  }
+
+  /* ⚡ Strom: Knistern aus kurzen Knacksern + fallender Zap */
+  function elElectric() {
+    for (let i = 0; i < 10; i++) {
+      noiseShaped({ dur: .015 + Math.random() * .02, vol: .14, delay: Math.random() * .28, type: "highpass", f0: 2500, q: 2, attack: .002 });
+    }
+    tone(2200, .25, "sawtooth", .05, -1900);
+    tone(90, .12, "square", .08, -30);
+  }
+  /* 🔥 Feuer: auffauchende Flamme + Glut-Knacken */
+  function elFire(big) {
+    noiseShaped({ dur: big ? .7 : .45, vol: .16, type: "lowpass", f0: 300, f1: 2400, q: .8, attack: .06 });
+    noiseShaped({ dur: big ? .5 : .35, vol: .12, delay: .12, type: "lowpass", f0: 2200, f1: 350, q: .8 });
+    for (let i = 0; i < 5; i++) {
+      noiseShaped({ dur: .02, vol: .1, delay: .08 + Math.random() * (big ? .5 : .3), type: "bandpass", f0: 800 + Math.random() * 2500, q: 6, attack: .002 });
+    }
+  }
+  /* 💧 Wasser: Blubbern + Platscher */
+  function elWater(big) {
+    for (let i = 0; i < (big ? 5 : 3); i++) {
+      tone(520 + Math.random() * 260, .08, "sine", .07, 180, .03 + i * .06);
+    }
+    noiseShaped({ dur: big ? .55 : .35, vol: .15, delay: .1, type: "bandpass", f0: 1600, f1: 500, q: 1.2, attack: .03 });
+    noiseShaped({ dur: .3, vol: .08, delay: .22, type: "lowpass", f0: 900, f1: 250 });
+  }
+  /* 🍃 Pflanze: Blätter-Rascheln + Peitschenknall */
+  function elGrass() {
+    for (let i = 0; i < 3; i++) {
+      noiseShaped({ dur: .09, vol: .09, delay: i * .07, type: "highpass", f0: 3200, q: 1.5, attack: .01 });
+    }
+    noiseShaped({ dur: .04, vol: .16, delay: .22, type: "bandpass", f0: 1500, q: 3, attack: .002 });
+    tone(1100, .07, "triangle", .05, -500, .22);
+  }
+  /* 🧠 Psycho: schwebende Schwebung + Glitzern */
+  function elPsychic() {
+    tone(480, .55, "sine", .06, 420);
+    tone(486, .55, "sine", .06, 430);
+    for (let i = 0; i < 3; i++) tone(1400 + i * 350, .1, "sine", .04, 200, .25 + i * .09);
+  }
+  /* 👻 Geist: unheimliches Heulen abwärts + Hauch */
+  function elGhost() {
+    tone(420, .6, "sawtooth", .035, -260);
+    tone(424, .6, "sine", .06, -270);
+    noiseShaped({ dur: .55, vol: .05, type: "bandpass", f0: 600, f1: 250, q: 2, attack: .15 });
+  }
+  /* 🪨 Boden/Gestein: Felsschläge + Grollen */
+  function elRock(big) {
+    for (let i = 0; i < (big ? 4 : 2); i++) {
+      noiseShaped({ dur: .1, vol: .2, delay: i * .11, type: "lowpass", f0: 240, f1: 70, attack: .003 });
+    }
+    noiseShaped({ dur: big ? .8 : .45, vol: .12, type: "lowpass", f0: 140, f1: 60, attack: .04 });
+  }
+  /* 🌬 Flug: Windböe */
+  function elWind() {
+    noiseShaped({ dur: .45, vol: .13, type: "bandpass", f0: 500, f1: 2200, q: 1.5, attack: .1 });
+    noiseShaped({ dur: .3, vol: .08, delay: .25, type: "bandpass", f0: 2200, f1: 700, q: 1.5 });
+  }
+  /* ☠ Gift: zähes Blubbern */
+  function elPoison() {
+    for (let i = 0; i < 5; i++) {
+      tone(180 + Math.random() * 160, .1, "sine", .07, 120, i * .07);
+    }
+    noiseShaped({ dur: .4, vol: .07, type: "lowpass", f0: 500, f1: 200, attack: .05 });
+  }
+
   return {
     preload, applyVolume,
     toggle() { Settings.set("muted", !Settings.data.muted); return Settings.data.muted; },
     get muted() { return Settings.data.muted; },
+
+    /* Elementar-Sound passend zum Attacken-Typ */
+    element(type, big = false) {
+      switch (type) {
+        case "electric": elElectric(); break;
+        case "fire":     elFire(big); break;
+        case "water":    elWater(big); break;
+        case "grass":    elGrass(); break;
+        case "psychic":  elPsychic(); break;
+        case "ghost":    elGhost(); break;
+        case "rock": case "ground": elRock(big); break;
+        case "flying":   elWind(); break;
+        case "poison":   elPoison(); break;
+        default: this.whoosh();
+      }
+    },
 
     tap()    { S("tap", .9) || tone(660, .06, "square", .05); },
     select() { S("select", .9) || (tone(520, .07, "square", .06), tone(780, .07, "square", .05, 0, .07)); },
