@@ -592,8 +592,7 @@ class IsoRenderer {
       const size = 64 * scale * z;
       ctx.save();
       ctx.translate(s.x, s.y);
-      ctx.rotate(ang);
-      ctx.scale(-1, 1); // Frames zeigen nativ nach links -> in Flugrichtung drehen
+      ctx.rotate(ang); // Frames zeigen nativ nach rechts -> nur in Flugrichtung drehen
       ctx.imageSmoothingEnabled = false;
       ctx.drawImage(img, idx * 64, 0, 64, 64, -size / 2, -size / 2, size, size);
       ctx.restore();
