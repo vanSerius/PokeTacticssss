@@ -96,12 +96,20 @@ const MOVE_VFX = {
 
 /* Kenney-Geländetiles (CC0) – einmalig geladen */
 const TileImages = {};
+const DecorImages = {};
 function loadTileImages() {
   for (const key of Object.keys(TERRAIN)) {
-    if (!TERRAIN[key].img || TileImages[key]) continue;
-    const img = new Image();
-    img.src = "assets/tiles/" + TERRAIN[key].img + ".png";
-    TileImages[key] = img;
+    const ter = TERRAIN[key];
+    if (ter.img && !TileImages[key]) {
+      const img = new Image();
+      img.src = "assets/tiles/" + ter.img + ".png";
+      TileImages[key] = img;
+    }
+    if (ter.decor && !DecorImages[ter.decor]) {
+      const img = new Image();
+      img.src = "assets/tiles/" + ter.decor + ".png";
+      DecorImages[ter.decor] = img;
+    }
   }
 }
 
@@ -157,6 +165,26 @@ class IsoRenderer {
     this.cursor = null;
     this.popups = [];
     this.particles = [];
+    this.amb = [];
+    this._ambTimer = 0;
+    this._flashT = 99;
+    this._flash = 0;
+    // Ambiente-Vorbereitung: Kartengrenzen + Spezial-Felder
+    this.ambTheme = (battle.def && battle.def.ambient) || "meadow";
+    this.waterTiles = [];
+    this.ghostTiles = [];
+    for (let y = 0; y < battle.h; y++)
+      for (let x = 0; x < battle.w; x++) {
+        const t = battle.terrainAt(x, y);
+        if (TERRAIN[t] && TERRAIN[t].water) this.waterTiles.push({ x, y });
+        if (t === "p" || t === "P" || t === "c") this.ghostTiles.push({ x, y });
+      }
+    this.mapBounds = {
+      minX: -(battle.h - 1) * TILE_W / 2 - 50,
+      maxX: (battle.w - 1) * TILE_W / 2 + 50,
+      minY: -90,
+      maxY: (battle.w + battle.h - 2) * TILE_H / 2 + 60,
+    };
     this.fitCamera();
   }
 
@@ -822,6 +850,160 @@ class IsoRenderer {
       if (f.t >= f.dur && f.done) { f.done(); f.done = null; }
     }
     this.fx = this.fx.filter((f) => f.t < f.dur);
+    this._updateAmbient(dt);
+  }
+
+  /* ---------- Ambiente: Blätter, Wisps, Staub, Funkeln, Blitze ---------- */
+  _spawnAmb(type) {
+    const mb = this.mapBounds;
+    const rnd = (a, b2) => a + Math.random() * (b2 - a);
+    if (type === "leaf" || type === "petal") {
+      this.amb.push({
+        type, wx: rnd(mb.minX, mb.maxX), wy: mb.minY - rnd(40, 140),
+        vx: rnd(-16, -5), vy: rnd(18, 32), phase: rnd(0, 6.3),
+        rot: rnd(0, 6.3), spin: rnd(-2, 2),
+        t: 0, life: rnd(7, 11),
+        color: type === "petal" ? (Math.random() < .5 ? "#f9a8d4" : "#fdf2f8") : (Math.random() < .5 ? "#6d9c38" : "#4c7a1f"),
+      });
+    } else if (type === "wisp") {
+      if (!this.ghostTiles.length) return;
+      const t0 = this.ghostTiles[Math.floor(Math.random() * this.ghostTiles.length)];
+      const c = this._tileCenterWorld(t0.x, t0.y, this.battle.heightAt(t0.x, t0.y));
+      this.amb.push({
+        type, wx: c.x + rnd(-20, 20), wy: c.y, vx: 0, vy: rnd(-22, -12),
+        phase: rnd(0, 6.3), t: 0, life: rnd(2.5, 4), size: rnd(2, 3.6),
+      });
+    } else if (type === "dust") {
+      this.amb.push({
+        type, wx: this.mapBounds.minX, wy: rnd(mb.minY + 80, mb.maxY - 30),
+        vx: rnd(12, 26), vy: rnd(-3, 3), phase: rnd(0, 6.3),
+        t: 0, life: rnd(8, 14), size: rnd(1, 2.2),
+      });
+    } else if (type === "sparkle") {
+      if (!this.waterTiles.length) return;
+      const t0 = this.waterTiles[Math.floor(Math.random() * this.waterTiles.length)];
+      const c = this._tileCenterWorld(t0.x, t0.y, this.battle.heightAt(t0.x, t0.y));
+      this.amb.push({ type, wx: c.x + rnd(-18, 18), wy: c.y + rnd(-6, 8), t: 0, life: .8 });
+    } else if (type === "ripple") {
+      if (!this.waterTiles.length) return;
+      const t0 = this.waterTiles[Math.floor(Math.random() * this.waterTiles.length)];
+      const c = this._tileCenterWorld(t0.x, t0.y, this.battle.heightAt(t0.x, t0.y));
+      this.amb.push({ type, wx: c.x, wy: c.y + 4, t: 0, life: 1.2 });
+    } else if (type === "butterfly") {
+      this.amb.push({
+        type, wx: rnd(mb.minX + 60, mb.maxX - 60), wy: rnd(mb.minY + 100, mb.maxY - 60),
+        phase: rnd(0, 6.3), t: 0, life: rnd(7, 12),
+        color: Math.random() < .5 ? "#fde047" : "#93c5fd",
+      });
+    }
+  }
+
+  _updateAmbient(dt) {
+    if (!this.battle) return;
+    this._ambTimer -= dt;
+    if (this._ambTimer <= 0) {
+      const th = this.ambTheme;
+      if (th === "meadow") { this._spawnAmb("leaf"); if (Math.random() < .3) this._spawnAmb("butterfly"); }
+      else if (th === "river") { this._spawnAmb(Math.random() < .5 ? "leaf" : "sparkle"); this._spawnAmb("ripple"); }
+      else if (th === "canyon") { this._spawnAmb("dust"); this._spawnAmb("dust"); }
+      else if (th === "ghost") { this._spawnAmb("wisp"); }
+      else if (th === "storm") { this._spawnAmb("dust"); }
+      else if (th === "arena") { this._spawnAmb("petal"); }
+      else if (th === "citadel") { this._spawnAmb("wisp"); }
+      if (this.waterTiles.length && th !== "river" && Math.random() < .4) this._spawnAmb("sparkle");
+      this._ambTimer = .5 + Math.random() * .6;
+    }
+    // Gewitter-Wetterleuchten
+    if (this.ambTheme === "storm" || this.ambTheme === "citadel") {
+      this._flashT -= dt;
+      if (this._flashT <= 0) {
+        this._flash = .45;
+        this._flashX = Math.random();
+        this._flashT = 7 + Math.random() * 9;
+      }
+    }
+    if (this._flash > 0) this._flash = Math.max(0, this._flash - dt);
+    for (const p of this.amb) {
+      p.t += dt;
+      if (p.type === "leaf" || p.type === "petal") {
+        p.wx += (p.vx + Math.sin(p.phase + p.t * 2.4) * 14) * dt;
+        p.wy += p.vy * dt;
+        p.rot += p.spin * dt;
+        if (p.wy > this.mapBounds.maxY + 30) p.t = p.life;
+      } else if (p.type === "wisp") {
+        p.wx += Math.sin(p.phase + p.t * 2) * 9 * dt;
+        p.wy += p.vy * dt;
+      } else if (p.type === "dust") {
+        p.wx += p.vx * dt;
+        p.wy += (p.vy + Math.sin(p.phase + p.t) * 4) * dt;
+        if (p.wx > this.mapBounds.maxX + 30) p.t = p.life;
+      } else if (p.type === "butterfly") {
+        p.wx += Math.sin(p.phase + p.t * .9) * 26 * dt;
+        p.wy += Math.cos(p.phase * 1.7 + p.t * 1.3) * 14 * dt;
+      }
+    }
+    this.amb = this.amb.filter((p) => p.t < p.life);
+  }
+
+  _drawAmbient() {
+    const ctx = this.ctx, z = this.cam.zoom;
+    for (const p of this.amb) {
+      const s = this.worldToScreen(p.wx, p.wy);
+      const fade = Math.min(1, p.t * 2, (p.life - p.t) * 1.5);
+      if (p.type === "leaf" || p.type === "petal") {
+        ctx.save();
+        ctx.globalAlpha = fade * .9;
+        ctx.translate(s.x, s.y);
+        ctx.rotate(p.rot);
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(0, 0, 3.2 * z, 1.6 * z, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      } else if (p.type === "wisp") {
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = fade * .7;
+        const g = ctx.createRadialGradient(s.x, s.y, 0, s.x, s.y, p.size * 3 * z);
+        g.addColorStop(0, "rgba(214,170,255,.9)");
+        g.addColorStop(1, "rgba(140,80,220,0)");
+        ctx.fillStyle = g;
+        ctx.beginPath(); ctx.arc(s.x, s.y, p.size * 3 * z, 0, Math.PI * 2); ctx.fill();
+        ctx.restore();
+      } else if (p.type === "dust") {
+        ctx.globalAlpha = fade * .3;
+        ctx.fillStyle = "#d6bb8e";
+        ctx.beginPath(); ctx.arc(s.x, s.y, p.size * z, 0, Math.PI * 2); ctx.fill();
+        ctx.globalAlpha = 1;
+      } else if (p.type === "sparkle") {
+        const a = Math.sin((p.t / p.life) * Math.PI);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        ctx.globalAlpha = a;
+        ctx.fillStyle = "#eaf6ff";
+        ctx.fillRect(s.x - 1 * z, s.y - 1 * z, 2 * z, 2 * z);
+        ctx.restore();
+      } else if (p.type === "ripple") {
+        const k = p.t / p.life;
+        ctx.globalAlpha = (1 - k) * .5;
+        ctx.strokeStyle = "#dceefb";
+        ctx.lineWidth = 1.2 * z;
+        ctx.beginPath();
+        ctx.ellipse(s.x, s.y, 16 * k * z, 7 * k * z, 0, 0, Math.PI * 2);
+        ctx.stroke();
+        ctx.globalAlpha = 1;
+      } else if (p.type === "butterfly") {
+        const flap = Math.abs(Math.sin(p.t * 14));
+        ctx.save();
+        ctx.globalAlpha = fade;
+        ctx.fillStyle = p.color;
+        ctx.beginPath();
+        ctx.ellipse(s.x - 2 * z * flap, s.y, 2.2 * z * flap, 1.6 * z, 0, 0, Math.PI * 2);
+        ctx.ellipse(s.x + 2 * z * flap, s.y, 2.2 * z * flap, 1.6 * z, 0, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.restore();
+      }
+    }
   }
 
   _draw() {
@@ -841,6 +1023,32 @@ class IsoRenderer {
       ctx.fillStyle = `rgba(220,228,255,${tw.toFixed(2)})`;
       ctx.fillRect(sx, sy, 1.6, 1.6);
     }
+    // langsam ziehende Wolken
+    for (let i = 0; i < 3; i++) {
+      const cw = 220 + i * 90;
+      const cx = ((i * 420 + this.time * (6 + i * 3)) % (W + cw * 2)) - cw;
+      const cy = H * (.12 + i * .14);
+      const g2 = ctx.createRadialGradient(cx, cy, 0, cx, cy, cw);
+      g2.addColorStop(0, "rgba(90,110,170,.10)");
+      g2.addColorStop(1, "rgba(90,110,170,0)");
+      ctx.fillStyle = g2;
+      ctx.beginPath(); ctx.ellipse(cx, cy, cw, cw * .35, 0, 0, Math.PI * 2); ctx.fill();
+    }
+    // Wetterleuchten (Gewitter-Karten)
+    if (this._flash > 0) {
+      const fa = this._flash / .45;
+      ctx.fillStyle = `rgba(220,228,255,${(fa * .09).toFixed(3)})`;
+      ctx.fillRect(0, 0, W, H);
+      ctx.strokeStyle = `rgba(240,244,255,${(fa * .5).toFixed(2)})`;
+      ctx.lineWidth = 2;
+      const fx0 = this._flashX * W;
+      ctx.beginPath();
+      ctx.moveTo(fx0, 0);
+      ctx.lineTo(fx0 + 14, H * .1);
+      ctx.lineTo(fx0 - 8, H * .18);
+      ctx.lineTo(fx0 + 10, H * .27);
+      ctx.stroke();
+    }
     if (!b) return;
 
     if (this._shake) {
@@ -859,6 +1067,7 @@ class IsoRenderer {
       this._drawTile(t.x, t.y);
       for (const u of b.unitsRenderAt(t.x, t.y)) this._drawUnit(u);
     }
+    this._drawAmbient();
     for (const f of this.fx) {
       ctx.save();
       if (f.additive) ctx.globalCompositeOperation = "lighter"; // Glow
@@ -909,9 +1118,32 @@ class IsoRenderer {
         ctx.closePath();
         ctx.fillStyle = ter.side2;
         ctx.fill();
+        // Gesteins-Schichten in hohen Klippen
+        ctx.strokeStyle = "rgba(0,0,0,.09)";
+        ctx.lineWidth = 1.2 * z;
+        for (let yy = sideD + hs; yy < depth - 2 * z; yy += hs) {
+          ctx.beginPath();
+          ctx.moveTo(s.x - hw, s.y + off + yy);
+          ctx.lineTo(s.x, s.y + hh + off + yy);
+          ctx.lineTo(s.x + hw, s.y + off + yy);
+          ctx.stroke();
+        }
       }
       ctx.drawImage(img, s.x - hw, s.y - hh + off - extraTop, TILE_W * z, imgH);
+      // organische Boden-Tönung pro Feld
+      const tintH = ((x * 40503) ^ (y * 9719)) >>> 0;
+      if (!ter.block && tintH % 4 < 2) {
+        ctx.beginPath();
+        ctx.moveTo(s.x, s.y - hh + off);
+        ctx.lineTo(s.x + hw, s.y + off);
+        ctx.lineTo(s.x, s.y + hh + off);
+        ctx.lineTo(s.x - hw, s.y + off);
+        ctx.closePath();
+        ctx.fillStyle = tintH % 4 === 0 ? "rgba(255,250,210,.05)" : "rgba(20,40,20,.06)";
+        ctx.fill();
+      }
       this._drawTileDecor(x, y, terKey, s, hw, hh, off, z);
+      this._drawDecorOverlay(x, y, ter, s, off, z);
       if (!ter.block && (x + y) % 2 === 0) {
         // dezentes Schachbrett für Lesbarkeit des Rasters
         ctx.beginPath();
@@ -996,6 +1228,36 @@ class IsoRenderer {
       ctx.strokeStyle = "#ffcb05";
       ctx.lineWidth = 3 * this.cam.zoom;
       ctx.stroke();
+    }
+  }
+
+  /* Animierte Deko-Objekte: Bäume wiegen sich, Kristalle pulsieren */
+  _drawDecorOverlay(x, y, ter, s, off, z) {
+    if (!ter.decor) return;
+    const ov = DecorImages[ter.decor];
+    if (!ov || !ov.complete || !ov.naturalWidth) return;
+    const ctx = this.ctx;
+    const unit = TILE_W / 132;
+    const w = TILE_W * z;
+    const h = ov.naturalHeight * unit * z;
+    const baseOff = 16 * unit * z; // Basislinie liegt 16px über Bild-Unterkante
+    const phase = x * 5.3 + y * 9.1;
+    let shear = 0;
+    if (ter.decor === "tree") shear = Math.sin(this.time * 1.2 + phase) * 0.045;
+    else if (ter.decor === "bush") shear = Math.sin(this.time * 1.8 + phase) * 0.025;
+    ctx.save();
+    ctx.translate(s.x, s.y + off + baseOff);
+    if (shear) ctx.transform(1, 0, shear, 1, 0, 0); // Wipfel neigt sich im Wind
+    ctx.drawImage(ov, -w / 2, -h, w, h);
+    ctx.restore();
+    if (ter.decor === "crystal") {
+      // pulsierendes Leuchten
+      const a = .25 + .2 * Math.sin(this.time * 2.2 + phase);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = a;
+      ctx.drawImage(ov, s.x - w / 2, s.y + off + baseOff - h, w, h);
+      ctx.restore();
     }
   }
 
@@ -1084,8 +1346,10 @@ class IsoRenderer {
     ctx.lineWidth = 2.4 * z;
     ctx.stroke();
 
-    // Sprite (unten verankert, hüpft bei Bewegung/aktivem Zug, versinkt beim K.O.)
-    const idleBob = b.active === u ? Math.sin(this.time * 4) * 2 * z : 0;
+    // Sprite (unten verankert, alle atmen leicht, aktiver hüpft, K.O. versinkt)
+    const idleBob = b.active === u
+      ? Math.sin(this.time * 4) * 2 * z
+      : Math.sin(this.time * 1.8 + u.x * 1.7 + u.y * 2.3) * 0.9 * z;
     const footY = ground.y + 3 * z - (u.hop || 0) * z + idleBob + (u.koSink || 0) * z;
     if (u.flash) ctx.globalAlpha = alpha * .35;
     const { dh } = SpriteCache.draw(ctx, u.species, ground.x - size / 2, footY - size, size, size, side, flip);

@@ -702,17 +702,17 @@ const TERRAIN = {
   b: { name: "Steg",         img: "bridge",    top: "#cfcabb", top2: "#bfb9a8", side: "#a77d53", side2: "#81603e" },
   p: { name: "Spukstein",    img: "ghost",     top: "#8369b8", top2: "#755da8", side: "#d08391", side2: "#a1646c" },
   P: { name: "Dunkelstein",  img: "ghostdark", top: "#594a78", top2: "#4d3f68", side: "#8d556b", side2: "#6d4150" },
-  /* Hindernisse (block) & begehbare Deko */
-  t: { name: "Baum",         img: "tree",      block: true, top: "#8cb846", top2: "#7ca340", side: "#7ca340", side2: "#5f7e30" },
-  u: { name: "Buschwerk",    img: "bush",      top: "#8cb846", top2: "#7ca340", side: "#7ca340", side2: "#5f7e30" },
-  r: { name: "Felsbrocken",  img: "boulder",   block: true, top: "#ba8c5d", top2: "#a77d53", side: "#a77d53", side2: "#81603e" },
-  c: { name: "Spukkristall", img: "crystal",   block: true, top: "#8369b8", top2: "#755da8", side: "#d08391", side2: "#a1646c" },
+  /* Hindernisse (block) & begehbare Deko: Boden-Tile + animiertes Overlay */
+  t: { name: "Baum",         img: "grass", decor: "tree",    block: true, top: "#8cb846", top2: "#7ca340", side: "#7ca340", side2: "#5f7e30" },
+  u: { name: "Buschwerk",    img: "grass", decor: "bush",    top: "#8cb846", top2: "#7ca340", side: "#7ca340", side2: "#5f7e30" },
+  r: { name: "Felsbrocken",  img: "dirt",  decor: "boulder", block: true, top: "#ba8c5d", top2: "#a77d53", side: "#a77d53", side2: "#81603e" },
+  c: { name: "Spukkristall", img: "ghost", decor: "crystal", block: true, top: "#8369b8", top2: "#755da8", side: "#d08391", side2: "#a1646c" },
 };
 
 /* ---------- Schlachten ---------- */
 const BATTLES = [
   {
-    id: 0, name: "Grüne Ebene", icon: "🌿",
+    id: 0, name: "Grüne Ebene", icon: "🌿", ambient: "meadow",
     desc: "Wilde Pokémon versperren den Weg. Ein sanfter Einstieg.",
     intro: "Wilde Pokémon greifen an!\nBesiege alle Gegner.",
     partySize: 3,
@@ -747,7 +747,7 @@ const BATTLES = [
     exp: 90, recruit: { sp: "machollo", lvl: 3 },
   },
   {
-    id: 1, name: "Flussfurt", icon: "🌊",
+    id: 1, name: "Flussfurt", icon: "🌊", ambient: "river",
     desc: "Ein reißender Fluss – nur die Brücke führt hinüber.",
     intro: "Gegner lauern am anderen Ufer.\nWasser-Pokémon können schwimmen!",
     partySize: 4,
@@ -783,7 +783,7 @@ const BATTLES = [
     exp: 110, recruit: { sp: "abra", lvl: 4 },
   },
   {
-    id: 2, name: "Felsschlucht", icon: "⛰",
+    id: 2, name: "Felsschlucht", icon: "⛰", ambient: "canyon",
     desc: "Steile Klippen – wer oben steht, hat den Vorteil.",
     intro: "Die Gegner halten die Höhen besetzt.\nErobere die Schlucht!",
     partySize: 4,
@@ -820,7 +820,7 @@ const BATTLES = [
     exp: 130, recruit: { sp: "evoli", lvl: 5 },
   },
   {
-    id: 3, name: "Spukturm", icon: "👻",
+    id: 3, name: "Spukturm", icon: "👻", ambient: "ghost",
     desc: "Im alten Turm flackern unheimliche Lichter.",
     intro: "Geister-Pokémon erscheinen!\nNormale Hiebe verpuffen an ihnen …",
     partySize: 5,
@@ -857,7 +857,7 @@ const BATTLES = [
     exp: 150, recruit: { sp: "nebulak", lvl: 7 },
   },
   {
-    id: 4, name: "Donnerplateau", icon: "⚡",
+    id: 4, name: "Donnerplateau", icon: "⚡", ambient: "storm",
     desc: "Magnetische Wachdrohnen patrouillieren auf den Terrassen.",
     intro: "Die Drohnen schweben über jede Klippe.\nVorsicht vor Paralyse!",
     partySize: 5,
@@ -894,7 +894,7 @@ const BATTLES = [
     exp: 170, recruit: { sp: "kleinstein", lvl: 8 },
   },
   {
-    id: 5, name: "Arena der Rivalen", icon: "⚔",
+    id: 5, name: "Arena der Rivalen", icon: "⚔", ambient: "arena",
     desc: "Das Rivalen-Team fordert dich zum Duell.",
     intro: "Ein ebenbürtiges Team!\nSie kennen dieselben Tricks wie du.",
     partySize: 5,
@@ -930,7 +930,7 @@ const BATTLES = [
     exp: 200, recruit: { sp: "relaxo", lvl: 9 },
   },
   {
-    id: 6, name: "Zitadelle des Champions", icon: "👑",
+    id: 6, name: "Zitadelle des Champions", icon: "👑", ambient: "citadel",
     desc: "Auf dem höchsten Thron wartet Mewtu.",
     intro: "Mewtu erhebt sich.\n»Zeigt mir eure Stärke – oder zerbrecht.«",
     partySize: 5,
