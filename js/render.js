@@ -278,8 +278,10 @@ class IsoRenderer {
   /* ---------- Effekte ---------- */
   addPopup(x, y, text, color = "#fff", big = false) {
     const b = this.battle;
-    const c = this._tileCenterWorld(x, y, b.heightAt(x, y));
-    this.popups.push({ wx: c.x, wy: c.y - 40, text, color, t: 0, big });
+    const c = this._tileCenterWorld(x, y, b.heightAt(Math.round(x), Math.round(y)));
+    // mehrere Popups auf derselben Kachel leicht versetzen
+    const stack = this.popups.filter((p) => Math.abs(p.wx - c.x) < 8 && p.t < .3).length;
+    this.popups.push({ wx: c.x, wy: c.y - 40 - stack * 18, text, color, t: 0, big });
   }
   burst(x, y, color, n = 14) {
     const b = this.battle;

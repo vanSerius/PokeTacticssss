@@ -10,8 +10,8 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Klassisches Typensystem**: Wasser löscht Feuer, Elektro schockt Flieger, Geister sind immun gegen normale Hiebe
 - **Flanken- & Rückenangriffe** (+10 % / +25 % Schaden), Flächenattacken mit Friendly Fire
 - **Status-Effekte**: Brand, Gift, Paralyse, Schlaf – plus Buffs & Debuffs
-- **Kampagne mit 7 Schlachten** inkl. Bosskämpfen (Onix, Rivalen-Team, Mewtu als Finale)
-- **Fortschrittssystem**: EP, Level-Ups, neue Attacken, **Entwicklungen** (Glumanda → Glutexo …) und Rekruten nach jedem Sieg
+- **Roguelike-Runs**: Starter-Wahl (1 aus 3), nach jedem Sieg Rekruten-Wahl (1 aus 2 oder ablehnen für EP), bei jedem Level-Up 1 aus 3 Verbesserungs-Karten (neue Attacke, +KP/ANG/VER/Tempo/Bewegung) – **Niederlage beendet den Run**, der beste Run wird gespeichert
+- **7 Etappen pro Run** inkl. Bosskämpfen (Onix, Rivalen-Team, Mewtu als Finale), **Entwicklungen** (Glumanda → Glutexo …) bleiben erhalten
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
 - **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback
 - **Gelände aus Kenneys „Isometric Landscape"-Pack** ([kenney.nl](https://kenney.nl), CC0) – inkl. eigens getönter Varianten für Spuk-Karten

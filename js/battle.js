@@ -4,20 +4,21 @@
    ============================================================ */
 "use strict";
 
-/* Einheit aus Roster-Eintrag bzw. Gegner-Definition erzeugen */
-function makeUnit(spId, lvl, team, x, y, boss = false) {
+/* Einheit aus Roster-Eintrag bzw. Gegner-Definition erzeugen.
+   entry (optional): Run-Eintrag mit individuellen Attacken & Stat-Boni */
+function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
   const sp = SPECIES[spId];
+  const bonus = (entry && entry.bonus) || { hp: 0, atk: 0, def: 0, spd: 0, mov: 0 };
   const st = (i) => Math.round(sp.base[i] + sp.grow[i] * (lvl - 1));
-  const moves = sp.learn
-    .filter(([l]) => l <= lvl)
-    .map(([, id]) => id)
-    .slice(-4);
+  const moves = (entry && entry.moves && entry.moves.length)
+    ? entry.moves.slice(0, 4)
+    : sp.learn.filter(([l]) => l <= lvl).map(([, id]) => id).slice(-4);
   return {
     species: spId, name: sp.name, role: sp.role, types: sp.types,
     lvl, team, boss: boss || !!sp.boss,
-    maxHp: st(0), hp: st(0),
-    atk: st(1), def: st(2), spd: sp.base[3],
-    mov: sp.mov, jmp: sp.jmp, fly: !!sp.fly, swim: !!sp.swim,
+    maxHp: st(0) + bonus.hp, hp: st(0) + bonus.hp,
+    atk: st(1) + bonus.atk, def: st(2) + bonus.def, spd: sp.base[3] + bonus.spd,
+    mov: sp.mov + (bonus.mov || 0), jmp: sp.jmp, fly: !!sp.fly, swim: !!sp.swim,
     x, y, rx: x, ry: y, hop: 0, facing: { x: 0, y: 1 },
     ct: Math.floor(Math.random() * 25),
     moves: moves.map((id) => ({ id, pp: MOVES[id].pp })),
@@ -36,7 +37,7 @@ class Battle {
     this.units = [];
     partyEntries.forEach((e, i) => {
       const [x, y] = def.spawns[i];
-      const u = makeUnit(e.sp, e.lvl, 0, x, y);
+      const u = makeUnit(e.sp, e.lvl, 0, x, y, false, e);
       u.rosterRef = e;
       this.units.push(u);
     });

@@ -138,7 +138,7 @@ const BattleUI = (() => {
           renderer.burst(u.x, u.y, ev.crit ? "#ffd84d" : "#ff7b54");
           let txt = "-" + ev.val;
           renderer.addPopup(u.x, u.y, txt, ev.crit ? "#ffd84d" : "#fff", ev.crit);
-          if (ev.mult >= 2) renderer.addPopup(u.x, u.y - 0.0001, "Sehr effektiv!", "#4ade80");
+          if (ev.mult >= 2) renderer.addPopup(u.x, u.y, "Sehr effektiv!", "#4ade80");
           else if (ev.mult > 0 && ev.mult < 1) renderer.addPopup(u.x, u.y, "Wenig effektiv …", "#a9a8c0");
           if (ev.dir === "back") renderer.addPopup(u.x, u.y, "Rückenangriff!", "#ffb03a");
           await withTimeout(renderer.animFlash(u), 1200);

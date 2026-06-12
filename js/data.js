@@ -963,12 +963,11 @@ const BATTLES = [
   },
 ];
 
-/* ---------- Kampagnen-Konstanten ---------- */
-const START_ROSTER = [
-  { sp: "pikachu",  lvl: 3 },
-  { sp: "glumanda", lvl: 3 },
-  { sp: "schiggy",  lvl: 3 },
-  { sp: "bisasam",  lvl: 3 },
-];
+/* ---------- Roguelike-Run-Konstanten ---------- */
+/* Pool für Starter, Gefährten und Rekruten */
+const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein"];
+const RECRUIT_POOL = [...PLAYER_POOL, "relaxo"];
+/* EP pro Etappe (Sieg); Ersatzbank erhält die Hälfte */
+const STAGE_EXP = [110, 140, 170, 200, 230, 260, 300];
 const EXP_PER_LEVEL = 100;
-const SAVE_KEY = "poketactics_save_v1";
+const SAVE_KEY = "poketactics_save_v2";
