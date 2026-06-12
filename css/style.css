@@ -412,3 +412,11 @@ input[type="range"]::-webkit-slider-thumb {
 .switch input:checked + .slider { background: var(--accent); }
 .switch input:checked + .slider:before { transform: translateX(24px); background: #4a3a00; }
 .credits { background: var(--panel); border-radius: var(--radius); padding: 12px 14px; font-size: .75rem; color: var(--ink-dim); line-height: 1.6; }
+
+/* ---------- Relikt-Zeile ---------- */
+.relic-row {
+  display: flex; gap: 8px; flex-wrap: wrap; align-items: center;
+  background: rgba(255,203,5,.08); border: 1px solid rgba(255,203,5,.25);
+  border-radius: 12px; padding: 7px 12px; margin-bottom: 10px;
+  font-size: 1.25rem; cursor: pointer;
+}

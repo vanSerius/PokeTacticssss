@@ -45,6 +45,23 @@ function healEntry(e, amount) {
   e.hp = Math.min(entryStats(e).hp, Math.max(1, (e.hp || 0) + amount));
 }
 
+/* Alte Runs ohne neue Felder nachrüsten */
+function migrateRun(run) {
+  if (!run) return;
+  if (!run.battleSeq) run.battleSeq = STAGE_POOLS.map((p) => p[0]);
+  if (!run.relics) run.relics = [];
+  if (run.phoenixUsed === undefined) run.phoenixUsed = false;
+}
+
+function hasRelic(id) {
+  const run = Game.save && Game.save.run;
+  return !!(run && run.relics && run.relics.includes(id));
+}
+
+function stageBattle(stage) {
+  return BATTLES[Game.save.run.battleSeq[stage]];
+}
+
 function avgRosterLvl() {
   const r = Game.save.run.roster;
   if (!r.length) return 3;
@@ -154,8 +171,8 @@ function updateTitle() {
   if (best && (best.stage > 0 || best.wins > 0)) {
     rec.classList.remove("hidden");
     rec.textContent = best.wins > 0
-      ? `🏆 Champion-Siege: ${best.wins} · Bester Run: Etappe ${best.stage}/${BATTLES.length}`
-      : `📜 Bester Run: Etappe ${best.stage}/${BATTLES.length}`;
+      ? `🏆 Champion-Siege: ${best.wins} · Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`
+      : `📜 Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`;
   } else {
     rec.classList.add("hidden");
   }
@@ -175,6 +192,8 @@ async function startNewRun() {
   Game.save.run = {
     stage: 0, roster: [starter, ...comps], graveyard: [],
     coins: 30, sinceEvent: 0, battleState: null,
+    battleSeq: STAGE_POOLS.map((pool) => sample(pool, 1)[0]),
+    relics: [], phoenixUsed: false,
   };
   writeSave();
   await showChoice({
@@ -189,20 +208,40 @@ async function startNewRun() {
 /* ---------- Etappen-Liste ---------- */
 function renderBattleList() {
   const run = Game.save.run;
+  migrateRun(run);
   const el = $("#battle-list");
   el.innerHTML = "";
   $(".map-head h2").innerHTML =
-    `🗺 Etappe ${Math.min(run.stage + 1, BATTLES.length)}/${BATTLES.length} · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
-  for (const b of BATTLES) {
-    const done = b.id < run.stage;
-    const current = b.id === run.stage;
+    `🗺 Etappe ${Math.min(run.stage + 1, STAGE_POOLS.length)}/${STAGE_POOLS.length} · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
+  // Relikt-Zeile
+  const relicRow = $("#relic-row");
+  if (run.relics.length) {
+    relicRow.classList.remove("hidden");
+    relicRow.innerHTML = run.relics.map((id) => `<span title="${RELICS[id].name}">${RELICS[id].icon}</span>`).join("");
+    relicRow.onclick = async () => {
+      Sfx.tap();
+      await showChoice({
+        title: "🎒 Deine Relikte",
+        sub: "Passive Boni für diesen Run:",
+        cards: run.relics.map((id) => ({ icon: RELICS[id].icon, title: RELICS[id].name, desc: RELICS[id].desc })),
+      });
+      renderBattleList();
+      showScreen("#screen-map");
+    };
+  } else {
+    relicRow.classList.add("hidden");
+  }
+  for (let stage = 0; stage < STAGE_POOLS.length; stage++) {
+    const b = stageBattle(stage);
+    const done = stage < run.stage;
+    const current = stage === run.stage;
     const weakened = current && run.battleState && run.battleState.stage === b.id;
     const item = document.createElement("div");
     item.className = "battle-item" + (done ? " done" : "") + (!done && !current ? " locked" : "");
     item.innerHTML = `
       <div class="bi-num">${b.icon}</div>
       <div class="bi-main">
-        <div class="bi-name">${b.id + 1}. ${b.name}</div>
+        <div class="bi-name">${stage + 1}. ${b.name}</div>
         <div class="bi-desc">${weakened ? "⚔ Die Gegner sind bereits verwundet – weiter geht's!" : b.desc}</div>
       </div>
       <div class="bi-state">${done ? "✅" : current ? "▶" : "🔒"}</div>`;
@@ -627,6 +666,15 @@ async function eventShop() {
         t.bonus.def += 4;
         return true;
       } },
+    { id: "relikt", icon: "🎒", price: P(130), title: "Relikt-Beutel", desc: "Ein zufälliges Relikt (passiver Run-Bonus).",
+      can: () => Object.keys(RELICS).some((id) => !run.relics.includes(id)),
+      use: async () => {
+        const pool = Object.keys(RELICS).filter((id) => !run.relics.includes(id));
+        const id = sample(pool, 1)[0];
+        run.relics.push(id);
+        await showChoice({ title: "🎒 Relikt erhalten!", sub: "", cards: [{ icon: RELICS[id].icon, title: RELICS[id].name, desc: RELICS[id].desc }] });
+        return true;
+      } },
     { id: "bonbon", icon: "🍬", price: P(85), title: "Sonderbonbon", desc: "+1 Level für ein Pokémon (mit Verbesserungs-Wahl).",
       can: () => run.roster.length > 0,
       use: async () => {
@@ -684,13 +732,111 @@ async function eventRast() {
   });
 }
 
+/* Relikt-Wahl: 1 aus 3 zufälligen, noch nicht besessenen */
+async function runRelicChoice() {
+  const run = Game.save.run;
+  const pool = Object.keys(RELICS).filter((id) => !run.relics.includes(id));
+  if (!pool.length) return;
+  const offers = sample(pool, Math.min(3, pool.length));
+  const i = await showChoice({
+    title: "🎒 Wähle ein Relikt!",
+    sub: "Ein passiver Bonus für den Rest des Runs:",
+    cards: offers.map((id) => ({ icon: RELICS[id].icon, title: RELICS[id].name, desc: RELICS[id].desc })),
+  });
+  run.relics.push(offers[i]);
+  Sfx.treasure();
+  writeSave();
+}
+
+async function eventSchrein() {
+  await showChoice({
+    title: "⛩ Ein alter Schrein!",
+    sub: "Im Moos glitzert etwas Uraltes …",
+    cards: [{ icon: "⛩", title: "Näher treten", desc: "Der Schrein bietet dir ein Relikt an." }],
+  });
+  await runRelicChoice();
+}
+
+async function eventDojo() {
+  const t = await pickTarget("🥋 Trainings-Dojo", "Ein Meister bietet einem Pokémon hartes Training (+60 EP):");
+  if (!t) return;
+  const levelups = [];
+  awardExp(t, 60, levelups);
+  Sfx.treasure();
+  writeSave();
+  await runLevelUpChoices(levelups);
+}
+
+async function eventEi() {
+  const run = Game.save.run;
+  const sp = sample(PLAYER_POOL, 1)[0];
+  const e = mkEntry(sp, 1);
+  await showChoice({
+    title: "🥚 Ein mysteriöses Ei!",
+    sub: "Es wackelt … und schlüpft direkt in deine Arme!",
+    cards: [pokemonCard(e)],
+  });
+  run.roster.push(e);
+  Sfx.treasure();
+  writeSave();
+  // Frisch geschlüpft: eine Verbesserungs-Karte gratis
+  await runLevelUpChoices([e]);
+}
+
+async function eventCasino() {
+  const run = Game.save.run;
+  if (run.coins < 30) return eventRast();
+  const i = await showChoice({
+    title: "🎰 Mauzi-Casino",
+    sub: `Mauzi schnurrt: „30 🪙 Einsatz – Kopf verdoppelt, Zahl kassiere ich!" (Du hast 🪙 ${run.coins})`,
+    cards: [{ icon: "🪙", title: "30 Münzen setzen", desc: "50 % Chance: verdoppeln oder verlieren." }],
+    skipLabel: "Lieber nicht",
+  });
+  if (i === -1) return;
+  if (Math.random() < 0.5) {
+    run.coins += 30;
+    Sfx.coins();
+    await showChoice({ title: "🎉 Gewonnen!", sub: "", cards: [{ icon: "🪙", title: "+30 Münzen", desc: `Du hast jetzt 🪙 ${run.coins}.` }] });
+  } else {
+    run.coins -= 30;
+    Sfx.cancel();
+    await showChoice({ title: "😿 Verloren …", sub: "", cards: [{ icon: "💸", title: "-30 Münzen", desc: `Mauzi verschwindet kichernd. Übrig: 🪙 ${run.coins}.` }] });
+  }
+  writeSave();
+}
+
+async function eventAltar() {
+  const run = Game.save.run;
+  const targets = run.roster.filter((e) => e.hp > 10);
+  if (!targets.length) return eventRast();
+  const i = await showChoice({
+    title: "🗿 Verfluchter Altar",
+    sub: "Eine raue Stimme: „Opfere Lebenskraft – ernte Stärke.“",
+    cards: [{ icon: "🩸", title: "Opfer darbringen", desc: "Ein Pokémon verliert 30 % seiner aktuellen KP und erhält sofort +1 Level (mit Karten-Wahl)." }],
+    skipLabel: "Weitergehen",
+  });
+  if (i === -1) return;
+  const t = await pickTarget("🩸 Wer opfert sich?", "", (e) => e.hp > 10);
+  if (!t) return;
+  t.hp = Math.max(1, t.hp - Math.round(t.hp * 0.3));
+  const levelups = [];
+  const before = entryStats(t).hp;
+  t.lvl++;
+  healEntry(t, entryStats(t).hp - before);
+  levelups.push(t);
+  Sfx.status();
+  writeSave();
+  await runLevelUpChoices(levelups);
+}
+
 async function maybeRandomEvent() {
   const run = Game.save.run;
   run.sinceEvent = (run.sinceEvent || 0) + 1;
   if (run.sinceEvent < 2) return;
   if (run.sinceEvent === 2 && Math.random() < 0.4) return; // manchmal erst nach 3
   run.sinceEvent = 0;
-  const events = [eventPokecenter, eventShop, eventShop, eventRast];
+  const events = [eventPokecenter, eventPokecenter, eventShop, eventShop, eventRast,
+                  eventSchrein, eventDojo, eventEi, eventCasino, eventAltar];
   await events[Math.floor(Math.random() * events.length)]();
   writeSave();
 }
@@ -706,6 +852,11 @@ function processCasualties(battle) {
     const entry = u.rosterRef;
     if (u.alive) {
       entry.hp = Math.max(1, Math.min(u.hp, entryStats(entry).hp));
+    } else if (hasRelic("phoenixfeder") && !run.phoenixUsed) {
+      // Phönixfeder: kehrt sofort mit 30 % KP zurück
+      run.phoenixUsed = true;
+      entry.hp = Math.max(1, Math.round(entryStats(entry).hp * 0.3));
+      entry.phoenixSaved = true;
     } else {
       entry.hp = 0;
       const idx = run.roster.indexOf(entry);
@@ -732,28 +883,38 @@ async function startBattle() {
   const def = Game.pendingBattle;
   const party = Game.selectedParty;
   const run = Game.save.run;
+  const clearedStage = run.stage;
   const enemyState = (run.battleState && run.battleState.stage === def.id) ? run.battleState.enemies : null;
-  const { result, battle } = await BattleUI.run(def, party, enemyState);
+  const { result, battle } = await BattleUI.run(def, party, enemyState, run.relics);
 
   const fallen = processCasualties(battle);
-  const fallenLines = fallen.map((e) =>
+  let fallenLines = fallen.map((e) =>
     `<div class="res-line">💀 <b>${SPECIES[e.sp].name}</b> ist gefallen! (Pokécenter/Beleber kann helfen)</div>`).join("");
+  for (const e of run.roster) {
+    if (e.phoenixSaved) {
+      delete e.phoenixSaved;
+      fallenLines += `<div class="res-line evo">🪶 Die <b>Phönixfeder</b> hat ${SPECIES[e.sp].name} gerettet!</div>`;
+    }
+  }
 
   if (result === 1) {
     run.battleState = null;
-    const exp = STAGE_EXP[def.id] || 150;
-    const coins = 30 + 12 * def.id;
+    let exp = STAGE_EXP[clearedStage] || 150;
+    if (hasRelic("epanhaenger")) exp = Math.round(exp * 1.2);
+    let coins = 30 + 12 * clearedStage;
+    if (hasRelic("gluecksmuenze")) coins = Math.round(coins * 1.4);
     run.coins += coins;
     const levelups = [];
     for (const entry of run.roster) {
       awardExp(entry, party.includes(entry) ? exp : Math.round(exp / 2), levelups);
     }
-    // Verschnaufpause: Überlebende heilen 25 % der max. KP
+    // Verschnaufpause: Überlebende heilen 25 % der max. KP (Wundsalbe: +10 %)
+    const healPct = 0.25 + (hasRelic("wundsalbe") ? 0.10 : 0);
     for (const entry of run.roster) {
-      if (party.includes(entry)) healEntry(entry, Math.round(entryStats(entry).hp * 0.25));
+      if (party.includes(entry)) healEntry(entry, Math.round(entryStats(entry).hp * healPct));
     }
-    const finale = def.id === BATTLES.length - 1;
-    run.stage = def.id + 1;
+    const finale = !!def.finale;
+    run.stage = clearedStage + 1;
     Game.save.best.stage = Math.max(Game.save.best.stage, run.stage);
     writeSave();
 
@@ -769,6 +930,7 @@ async function startBattle() {
     $("#result-title").className = "win";
     $("#result-body").innerHTML = lines.join("");
     Game.onResultNext = async () => {
+      if ([1, 3, 5].includes(clearedStage)) await runRelicChoice();
       if (!finale) await runRecruitChoice(levelups);
       await runLevelUpChoices(levelups);
       if (!finale) await maybeRandomEvent();
@@ -804,8 +966,8 @@ async function startBattle() {
     $("#result-title").textContent = "💀 Run beendet";
     $("#result-title").className = "lose";
     $("#result-body").innerHTML = `
-      <div class="res-line">Dein letztes Pokémon ist in <b>Etappe ${def.id + 1}</b> gefallen.</div>
-      <div class="res-line">Bester Run: <b>Etappe ${Game.save.best.stage}/${BATTLES.length}</b>${Game.save.best.wins ? ` · 👑 Siege: <b>${Game.save.best.wins}</b>` : ""}</div>
+      <div class="res-line">Dein letztes Pokémon ist in <b>Etappe ${clearedStage + 1}</b> gefallen.</div>
+      <div class="res-line">Bester Run: <b>Etappe ${Game.save.best.stage}/${STAGE_POOLS.length}</b>${Game.save.best.wins ? ` · 👑 Siege: <b>${Game.save.best.wins}</b>` : ""}</div>
       <div class="res-line">Jeder Run ist anders: neuer Starter, neue Rekruten, neue Karten. Versuch's gleich nochmal!</div>`;
     Game.onResultNext = () => { updateTitle(); showScreen("#screen-title"); };
     showScreen("#screen-result");

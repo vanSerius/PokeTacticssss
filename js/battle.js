@@ -33,9 +33,11 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
 }
 
 class Battle {
-  /* enemyState: KP-Reste aus vorherigem Versuch (Index = Gegner-Index, 0 = tot) */
-  constructor(def, partyEntries, enemyState = null) {
+  /* enemyState: KP-Reste aus vorherigem Versuch (Index = Gegner-Index, 0 = tot)
+     relics: passive Run-Items (wirken nur für Team 0) */
+  constructor(def, partyEntries, enemyState = null, relics = []) {
     this.def = def;
+    this.relics = relics || [];
     this.h = def.heights.length;
     this.w = def.heights[0].length;
     this.heights = def.heights.map((r) => [...r].map(Number));
@@ -45,6 +47,10 @@ class Battle {
       const [x, y] = def.spawns[i];
       const u = makeUnit(e.sp, e.lvl, 0, x, y, false, e);
       u.rosterRef = e;
+      // Relikt-Boni
+      if (this.relics.includes("manakristall")) u.mana = Math.min(u.manaMax, u.mana + 1);
+      if (this.relics.includes("sprungfedern")) u.jmp += 1;
+      if (this.relics.includes("tempoband")) u.spd += 1;
       this.units.push(u);
     });
     def.enemies.forEach((e, i) => {
@@ -305,7 +311,8 @@ class Battle {
     const dh = this.heightAt(attacker.x, attacker.y) - this.heightAt(defender.x, defender.y);
     const hMult = dh > 0 ? 1.15 : dh < 0 ? 0.9 : 1;
     const base = m.pow * (this.effAtk(attacker) / (this.effDef(defender) + 30));
-    const guardMult = defender.guarding ? 0.75 : 1;
+    const guardBase = (defender.team === 0 && this.relics.includes("schutzamulett")) ? 0.6 : 0.75;
+    const guardMult = defender.guarding ? guardBase : 1;
     const dmg = Math.max(1, Math.round(base * tm * dirMult * hMult * guardMult));
     let hit = m.acc >= 999 ? 100 : m.acc - Math.round(this.effSpd(defender) * 1.2);
     if (dir === "back") hit += 15;
@@ -358,7 +365,8 @@ class Battle {
       const p = this.predict(attacker, moveId, t);
       if (p.mult === 0) { events.push({ type: "immune", unit: t }); continue; }
       if (Math.random() * 100 >= p.hit) { events.push({ type: "miss", unit: t }); continue; }
-      const critCh = (m.crit || 6);
+      let critCh = (m.crit || 6);
+      if (attacker.team === 0 && this.relics.includes("klauen")) critCh += 10;
       const crit = Math.random() * 100 < critCh;
       let dmg = Math.round(p.dmg * (0.9 + Math.random() * 0.2) * (crit ? 1.5 : 1));
       dmg = Math.max(1, dmg);
@@ -381,6 +389,13 @@ class Battle {
         events.push({ type: "buff", unit: t, up: m.buff.mult > 1, label: "TEMPO ▼" });
       }
       if (t.hp <= 0) { t.alive = false; events.push({ type: "ko", unit: t }); }
+      // Dornenpanzer: Nahkampf-Angreifer gegen das Spielerteam erleiden Schaden
+      if (m.rng <= 1 && m.cat === "p" && attacker.team === 1 && t.team === 0 &&
+          this.relics.includes("dornenpanzer") && attacker.alive) {
+        attacker.hp = Math.max(0, attacker.hp - 3);
+        events.push({ type: "thorns", unit: attacker, val: 3 });
+        if (attacker.hp <= 0) { attacker.alive = false; events.push({ type: "ko", unit: attacker }); }
+      }
     }
     return events;
   }

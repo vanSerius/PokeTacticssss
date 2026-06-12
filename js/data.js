@@ -121,6 +121,7 @@ const MOVES = {
   superschall: { name: "Superschall", type: "flying",  cat: "s", pow: 0,  rng: 3, aoe: 0, acc: 75, pp: 8, buff: { stat: "atk", mult: .65, dur: 3 }, target: "foe", desc: "Schrille Wellen schwächen den Angriff." },
 
   heilwoge:    { name: "Heilwoge",    type: "psychic", cat: "s", pow: 0,  rng: 3, aoe: 0, acc: 100, pp: 8, heal: .45, target: "ally", desc: "Heilt einen Verbündeten (45 % max. KP)." },
+  platscher:   { name: "Platscher",   type: "normal",  cat: "p", pow: 12, rng: 1, aoe: 0, acc: 100, pp: Infinity, target: "foe", desc: "Platsch, platsch … fast völlig wirkungslos. Karpador eben." },
   psychoklinge:{ name: "Psychoklinge",type: "psychic", cat: "m", pow: 72, rng: 4, aoe: 1, acc: 95, pp: 6, target: "foe", desc: "Mewtus verheerende Psycho-Klinge." },
 };
 
@@ -237,7 +238,102 @@ const SPECIES = {
     learn: [[1,"bodyslam"],[1,"erholung"],[1,"heuler"]],
   },
 
+  /* === Neue Spieler-Pokémon (Run-Vielfalt) === */
+  fukano: {
+    dex: 58, name: "Fukano", role: "Flammenwächter", types: ["fire"], sprite: "evoli",
+    base: [40, 17, 12, 10], grow: [3.7, 1.8, 1.3, 0], mov: 4, jmp: 2,
+    learn: [[1,"biss"],[1,"glut"],[4,"ruckzuck"],[8,"flammenwurf"]],
+    evoTo: "arkani",
+  },
+  arkani: {
+    dex: 59, name: "Arkani", role: "Legendenhund", types: ["fire"], sprite: "evoli",
+    base: [56, 24, 16, 12], grow: [4.3, 2.1, 1.5, 0], mov: 5, jmp: 2,
+    learn: [[1,"biss"],[1,"glut"],[1,"ruckzuck"],[1,"flammenwurf"]],
+  },
+  menki: {
+    dex: 56, name: "Menki", role: "Raufbold", types: ["fighting"], sprite: "machollo",
+    base: [40, 18, 11, 11], grow: [3.6, 1.9, 1.2, 0], mov: 4, jmp: 2,
+    learn: [[1,"karateschlag"],[1,"ruckzuck"],[6,"protzer"],[9,"geowurf"]],
+    evoTo: "rasaff",
+  },
+  rasaff: {
+    dex: 57, name: "Rasaff", role: "Wutprimat", types: ["fighting"], sprite: "machollo",
+    base: [54, 24, 15, 12], grow: [4.2, 2.2, 1.4, 0], mov: 4, jmp: 2,
+    learn: [[1,"karateschlag"],[1,"geowurf"],[1,"protzer"],[1,"ruckzuck"]],
+  },
+  knofensa: {
+    dex: 69, name: "Knofensa", role: "Schlingpflanze", types: ["grass","poison"], sprite: "bisasam",
+    base: [38, 18, 10, 9], grow: [3.5, 2.0, 1.1, 0], mov: 3, jmp: 2,
+    learn: [[1,"rankenhieb"],[1,"giftstachel"],[5,"schlafpuder"],[9,"rasierblatt"]],
+    evoTo: "ultrigaria",
+  },
+  ultrigaria: {
+    dex: 70, name: "Ultrigaria", role: "Würgranke", types: ["grass","poison"], sprite: "bisasam",
+    base: [52, 24, 14, 10], grow: [4.1, 2.2, 1.3, 0], mov: 3, jmp: 2,
+    learn: [[1,"rankenhieb"],[1,"saeure"],[1,"schlafpuder"],[1,"rasierblatt"]],
+  },
+  sterndu: {
+    dex: 120, name: "Sterndu", role: "Seestern", types: ["water"], sprite: "kleinstein",
+    base: [40, 15, 14, 10], grow: [3.7, 1.6, 1.5, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"tackle"],[1,"aquaknarre"],[5,"sternschauer"],[9,"blubbstrahl"]],
+    evoTo: "starmie",
+  },
+  starmie: {
+    dex: 121, name: "Starmie", role: "Sternjuwel", types: ["water","psychic"], sprite: "kleinstein",
+    base: [52, 21, 18, 12], grow: [4.0, 1.9, 1.7, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"aquaknarre"],[1,"sternschauer"],[1,"psystrahl"],[1,"genesung"]],
+  },
+  voltobal: {
+    dex: 100, name: "Voltobal", role: "Kugelblitz", types: ["electric"], sprite: "kleinstein",
+    base: [36, 15, 12, 12], grow: [3.4, 1.7, 1.3, 0], mov: 4, jmp: 2,
+    learn: [[1,"tackle"],[1,"donnerschock"],[5,"donnerwelle"],[9,"funkensprung"]],
+    evoTo: "lektrobal",
+  },
+  lektrobal: {
+    dex: 101, name: "Lektrobal", role: "Gewitterkugel", types: ["electric"], sprite: "kleinstein",
+    base: [48, 20, 16, 14], grow: [3.8, 1.9, 1.5, 0], mov: 5, jmp: 2,
+    learn: [[1,"donnerschock"],[1,"donnerwelle"],[1,"funkensprung"],[1,"donnerblitz"]],
+  },
+  sleima: {
+    dex: 88, name: "Sleima", role: "Schlammwesen", types: ["poison"], sprite: "relaxo",
+    base: [44, 16, 13, 6], grow: [4.0, 1.8, 1.4, 0], mov: 3, jmp: 1,
+    learn: [[1,"giftstachel"],[1,"schlecker"],[5,"saeure"],[9,"bodyslam"]],
+    evoTo: "sleimok",
+  },
+  sleimok: {
+    dex: 89, name: "Sleimok", role: "Schlammkoloss", types: ["poison"], sprite: "relaxo",
+    base: [60, 22, 17, 7], grow: [4.6, 2.0, 1.6, 0], mov: 3, jmp: 1,
+    learn: [[1,"giftstachel"],[1,"saeure"],[1,"bodyslam"],[1,"schlecker"]],
+  },
+  karpador: {
+    dex: 129, name: "Karpador", role: "Hoffnungsträger", types: ["water"], sprite: "schiggy",
+    base: [36, 8, 10, 11], grow: [3.0, 1.0, 1.1, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"platscher"]],
+    evoTo: "garados",
+  },
+  garados: {
+    dex: 130, name: "Garados", role: "Schreckensdrache", types: ["water","flying"], sprite: "rettan",
+    base: [62, 26, 17, 11], grow: [4.8, 2.3, 1.6, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"biss"],[1,"aquaknarre"],[1,"hydropumpe"],[1,"intensitaet"]],
+  },
+
   /* === Gegner === */
+  habitak: {
+    dex: 21, name: "Habitak", role: "Sturzflieger", types: ["normal","flying"], sprite: "taubsi",
+    base: [30, 14, 9, 12], grow: [2.9, 1.5, 1.0, 0], mov: 4, jmp: 4, fly: true,
+    learn: [[1,"schnabel"],[3,"windstoss"],[6,"fluegelschlag"]],
+  },
+  smettbo: {
+    dex: 12, name: "Smettbo", role: "Puderflügel", types: ["flying","poison"], sprite: "zubat",
+    base: [34, 15, 11, 10], grow: [3.1, 1.6, 1.1, 0], mov: 4, jmp: 5, fly: true,
+    learn: [[1,"windstoss"],[4,"schlafpuder"],[8,"psystrahl"]],
+  },
+  golbat: {
+    dex: 42, name: "Golbat", role: "Schattenflügel", types: ["poison","flying"], sprite: "zubat",
+    base: [44, 19, 13, 13], grow: [3.6, 1.9, 1.3, 0], mov: 5, jmp: 5, fly: true,
+    learn: [[1,"biss"],[1,"giftstachel"],[1,"superschall"],[1,"fluegelschlag"]],
+  },
+
   rattfratz: {
     dex: 19, name: "Rattfratz", role: "Plünderer", types: ["normal"], sprite: "rattfratz",
     base: [32, 14, 10, 10], grow: [3.0, 1.5, 1.1, 0], mov: 4, jmp: 2,
@@ -887,7 +983,7 @@ const BATTLES = [
     enemies: [
       { sp: "magnetilo", lvl: 6, x: 2, y: 2 },
       { sp: "magnetilo", lvl: 6, x: 7, y: 2 },
-      { sp: "magnetilo", lvl: 7, x: 4, y: 1 },
+      { sp: "magnetilo", lvl: 6, x: 4, y: 1 },
       { sp: "tragosso",  lvl: 7, x: 5, y: 2 },
       { sp: "onix",      lvl: 7, x: 5, y: 0, boss: true },
     ],
@@ -930,7 +1026,7 @@ const BATTLES = [
     exp: 200, recruit: { sp: "relaxo", lvl: 9 },
   },
   {
-    id: 6, name: "Zitadelle des Champions", icon: "👑", ambient: "citadel",
+    id: 6, name: "Zitadelle des Champions", icon: "👑", ambient: "citadel", finale: true,
     desc: "Auf dem höchsten Thron wartet Mewtu.",
     intro: "Mewtu erhebt sich.\n»Zeigt mir eure Stärke – oder zerbrecht.«",
     partySize: 5,
@@ -966,7 +1062,223 @@ const BATTLES = [
     ],
     exp: 250,
   },
+
+  /* ===== Karten-Varianten (werden pro Run gegen die Originale gewürfelt) ===== */
+  {
+    id: 7, name: "Blumenwiese", icon: "🌼", ambient: "meadow",
+    desc: "Ein Meer aus Blüten – und frecher Flugschar.",
+    intro: "Zwischen den Blumen raschelt es!\nBesiege alle Gegner.",
+    partySize: 4,
+    heights: [
+      "000000000",
+      "011000110",
+      "011000110",
+      "000000000",
+      "000111000",
+      "000111000",
+      "000000000",
+      "110000000",
+      "110000000",
+    ],
+    terrain: [
+      "tgggggggt",
+      "ggggggggg",
+      "gguGGuggg",
+      "ggggggggg",
+      "ggGuuuGgg",
+      "ggGuuuGgg",
+      "ggggggggg",
+      "ggggggggg",
+      "tgggggggt",
+    ],
+    spawns: [[1,7],[3,8],[2,8],[1,6],[4,8]],
+    enemies: [
+      { sp: "rattfratz", lvl: 2, x: 6, y: 1 },
+      { sp: "habitak",   lvl: 2, x: 4, y: 1 },
+      { sp: "smettbo",   lvl: 3, x: 7, y: 2 },
+    ],
+  },
+  {
+    id: 8, name: "Sumpfpfad", icon: "🐸", ambient: "river",
+    desc: "Trübe Tümpel und giftiges Gewürm.",
+    intro: "Der Boden gluckert verdächtig.\nVorsicht vor Gift!",
+    partySize: 4,
+    heights: [
+      "0000000000",
+      "0000000000",
+      "0000000000",
+      "0011001100",
+      "0000000000",
+      "0000000000",
+      "0011001100",
+      "0000000000",
+      "0000000000",
+    ],
+    terrain: [
+      "tggggggggt",
+      "gwwggggwwg",
+      "gwwggggwwg",
+      "gggggggggg",
+      "ggggwwgggg",
+      "gguGwwGugg",
+      "gggggggggg",
+      "gwwggggwwg",
+      "tggggggggt",
+    ],
+    spawns: [[0,4],[1,3],[1,5],[2,4],[0,3]],
+    enemies: [
+      { sp: "rettan",  lvl: 3, x: 8, y: 4 },
+      { sp: "sleima",  lvl: 3, x: 7, y: 3 },
+      { sp: "zubat",   lvl: 3, x: 8, y: 6 },
+      { sp: "smettbo", lvl: 3, x: 7, y: 5 },
+    ],
+  },
+  {
+    id: 9, name: "Geröllhang", icon: "🪨", ambient: "canyon",
+    desc: "Ein steiler Hang – die Gegner thronen oben.",
+    intro: "Steine poltern den Hang herab.\nErklimm die Anhöhe!",
+    partySize: 4,
+    heights: [
+      "4433221100",
+      "4433221100",
+      "3322110000",
+      "3322110000",
+      "2211000000",
+      "2211000000",
+      "1100000000",
+      "1100000000",
+      "0000000000",
+    ],
+    terrain: [
+      "sssssddddd",
+      "sssssddddd",
+      "ssssddrddd",
+      "ssssdddddd",
+      "ssdddddddd",
+      "ssdrdddddd",
+      "sddddddddd",
+      "sddddddddd",
+      "dddddddddd",
+    ],
+    spawns: [[8,8],[9,7],[7,8],[8,7],[9,8]],
+    enemies: [
+      { sp: "kleinstein", lvl: 4, x: 1, y: 1 },
+      { sp: "sandan",     lvl: 4, x: 3, y: 2 },
+      { sp: "tragosso",   lvl: 4, x: 2, y: 3 },
+      { sp: "menki",      lvl: 4, x: 4, y: 4 },
+      { sp: "kleinstein", lvl: 5, x: 0, y: 0, boss: true },
+    ],
+  },
+  {
+    id: 10, name: "Nebelfriedhof", icon: "🪦", ambient: "ghost",
+    desc: "Kristallgräber im wabernden Nebel.",
+    intro: "Zwischen den Gräbern flüstert es …\nGeister lieben Flanken!",
+    partySize: 5,
+    heights: [
+      "000000000",
+      "000000000",
+      "000000000",
+      "000000000",
+      "000111000",
+      "000000000",
+      "000000000",
+      "000000000",
+      "000000000",
+    ],
+    terrain: [
+      "ppppppppp",
+      "pPpppppPp",
+      "pcpppppcp",
+      "ppppppppp",
+      "pppPPPppp",
+      "ppcpppcpp",
+      "ppppppppp",
+      "ppppppppp",
+      "pPpppppPp",
+    ],
+    spawns: [[3,8],[5,8],[4,8],[2,8],[6,8]],
+    enemies: [
+      { sp: "nebulak", lvl: 5, x: 2, y: 2 },
+      { sp: "nebulak", lvl: 5, x: 5, y: 2 },
+      { sp: "zubat",   lvl: 5, x: 7, y: 1 },
+      { sp: "sleima",  lvl: 4, x: 4, y: 2 },
+      { sp: "alpollo", lvl: 5, x: 4, y: 4, boss: true },
+    ],
+  },
+  {
+    id: 11, name: "Windklippen", icon: "🌬", ambient: "storm",
+    desc: "Zwei Grate im Sturm – Flieger im Vorteil.",
+    intro: "Der Wind heult über die Klippen.\nEtwas Großes kreist dort oben …",
+    partySize: 5,
+    heights: [
+      "1233332100",
+      "1233332100",
+      "0122221000",
+      "0011110000",
+      "0000000000",
+      "0011110000",
+      "0122221000",
+      "1233332100",
+      "1233332100",
+    ],
+    terrain: [
+      "ssssssssdd",
+      "ssssssssdd",
+      "dssssssddd",
+      "ddssssdddd",
+      "ddddddddrd",
+      "ddssssdddd",
+      "dssssssddd",
+      "ssssssssdd",
+      "ssssssssdd",
+    ],
+    spawns: [[9,4],[8,3],[8,5],[9,3],[9,5]],
+    enemies: [
+      { sp: "habitak",   lvl: 5, x: 2, y: 0 },
+      { sp: "golbat",    lvl: 5, x: 3, y: 8 },
+      { sp: "magnetilo", lvl: 6, x: 4, y: 1 },
+      { sp: "garados",   lvl: 6, x: 1, y: 4, boss: true },
+    ],
+  },
+  {
+    id: 12, name: "Banditenlager", icon: "🏴", ambient: "arena",
+    desc: "Ein Lager voller abgebrühter Schurken-Pokémon.",
+    intro: "»Falsche Wiese, Freundchen.«\nDie Bande greift geschlossen an!",
+    partySize: 5,
+    heights: [
+      "000000000",
+      "000000000",
+      "000000000",
+      "001111100",
+      "001111100",
+      "001111100",
+      "000000000",
+      "000000000",
+      "000000000",
+    ],
+    terrain: [
+      "tgggggggt",
+      "ggggggggg",
+      "ggdddddgg",
+      "ggdddddgg",
+      "ggddbddgg",
+      "ggdddddgg",
+      "ggdddddgg",
+      "ggggggggg",
+      "tgggggggt",
+    ],
+    spawns: [[3,8],[5,8],[4,8],[2,8],[6,8]],
+    enemies: [
+      { sp: "rasaff",     lvl: 8, x: 4, y: 2, boss: true },
+      { sp: "ultrigaria", lvl: 8, x: 3, y: 3 },
+      { sp: "lektrobal",  lvl: 8, x: 5, y: 3 },
+      { sp: "golbat",     lvl: 8, x: 6, y: 4 },
+    ],
+  },
 ];
+
+/* Pro Etappe ein Karten-Pool; pro Run wird je eine Karte gewürfelt */
+const STAGE_POOLS = [[0, 7], [1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6]];
 
 /* ---------- Mana ----------
    Attacken kosten Mana statt PP. Start knapp, +MANA_REGEN je eigener Runde. */
@@ -986,8 +1298,23 @@ function manaCost(m) {
 /* Ab diesem Level wird die Entwicklung angeboten (Reset auf Lv.1!) */
 const EVO_LEVEL = 5;
 /* Pool für Starter, Gefährten und Rekruten */
-const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein"];
-const RECRUIT_POOL = [...PLAYER_POOL, "relaxo"];
+const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein",
+                     "fukano","menki","knofensa","sterndu","voltobal","sleima","karpador"];
+const RECRUIT_POOL = [...PLAYER_POOL, "relaxo", "tragosso"];
+/* ---------- Relikte: passive Run-Items ---------- */
+const RELICS = {
+  wundsalbe:    { icon: "🧴", name: "Wundsalbe",     desc: "Nach jedem Sieg heilt der Trupp 10 % zusätzlich." },
+  manakristall: { icon: "🔷", name: "Mana-Kristall", desc: "Alle Pokémon starten Kämpfe mit +1 Mana." },
+  sprungfedern: { icon: "🦘", name: "Sprungfedern",  desc: "+1 Sprunghöhe für das ganze Team." },
+  gluecksmuenze:{ icon: "🍀", name: "Glücksmünze",   desc: "+40 % Münzen aus Siegen." },
+  epanhaenger:  { icon: "📿", name: "EP-Anhänger",   desc: "+20 % Erfahrungspunkte." },
+  dornenpanzer: { icon: "🌵", name: "Dornenpanzer",  desc: "Nahkampf-Angreifer erleiden 3 Schaden." },
+  schutzamulett:{ icon: "🛡", name: "Schutzamulett", desc: "Blocken reduziert 40 % statt 25 % Schaden." },
+  phoenixfeder: { icon: "🪶", name: "Phönixfeder",   desc: "Einmal pro Run kehrt ein Gefallener sofort mit 30 % KP zurück." },
+  klauen:       { icon: "🗡", name: "Scharfe Klauen",desc: "+10 % Volltreffer-Chance für dein Team." },
+  tempoband:    { icon: "💨", name: "Tempo-Band",    desc: "+1 Tempo für das ganze Team." },
+};
+
 /* EP pro Etappe (Sieg); Ersatzbank erhält die Hälfte */
 const STAGE_EXP = [110, 140, 170, 200, 230, 260, 300];
 const EXP_PER_LEVEL = 100;

@@ -191,6 +191,11 @@ const BattleUI = (() => {
           renderer.addPopup(u.x, u.y, "Aufgewacht!", "#fde047");
           await renderer.wait(420);
           break;
+        case "thorns":
+          Sfx.status();
+          renderer.addPopup(u.x, u.y, `🌵 -${ev.val}`, "#a3e635");
+          await renderer.wait(380);
+          break;
         case "paralyzed":
           renderer.addPopup(u.x, u.y, "⚡ Paralysiert!", "#fde047");
           await renderer.wait(500);
@@ -534,9 +539,9 @@ const BattleUI = (() => {
   }
 
   /* ---------- Hauptschleife ---------- */
-  async function run(def, partyEntries, enemyState = null) {
+  async function run(def, partyEntries, enemyState = null, relics = []) {
     Music.battleTheme = (def.ambient === "ghost" || def.ambient === "citadel") ? "dark" : "battle";
-    battle = new Battle(def, partyEntries, enemyState);
+    battle = new Battle(def, partyEntries, enemyState, relics);
     showScreen("#screen-battle");
     renderer.resize();          // Canvas war evtl. unsichtbar (Größe 0)
     renderer.setBattle(battle);
@@ -559,7 +564,7 @@ const BattleUI = (() => {
     };
     $("#btn-info-close").onclick = () => $("#info-modal").classList.add("hidden");
 
-    if (def.id === BATTLES.length - 1) Sfx.boss();
+    if (def.finale) Sfx.boss();
     else Sfx.battlestart();
     await banner(`${def.icon} ${def.name}`, 1100);
     await banner(def.intro, 1700);
