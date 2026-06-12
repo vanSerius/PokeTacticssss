@@ -27,7 +27,7 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
     ct: Math.floor(Math.random() * 25),
     moves,                                    // Attacken-IDs
     mana: MANA_START, manaMax: MANA_MAX,
-    statuses: [], buffs: [],
+    statuses: [], buffs: [], guarding: false,
     alive: true, anim: null, alpha: 1, flash: false,
   };
 }
@@ -128,6 +128,7 @@ class Battle {
       let cost = 100;
       if (!moved) cost -= 12;
       if (!acted) cost -= 12;
+      u.guarding = !acted;   // ohne Angriff: Blocken (-25 % Schaden)
       u.ct -= cost;
       // Buffs laufen am eigenen Zugende ab
       for (const b of u.buffs) b.dur--;
@@ -304,7 +305,8 @@ class Battle {
     const dh = this.heightAt(attacker.x, attacker.y) - this.heightAt(defender.x, defender.y);
     const hMult = dh > 0 ? 1.15 : dh < 0 ? 0.9 : 1;
     const base = m.pow * (this.effAtk(attacker) / (this.effDef(defender) + 30));
-    const dmg = Math.max(1, Math.round(base * tm * dirMult * hMult));
+    const guardMult = defender.guarding ? 0.75 : 1;
+    const dmg = Math.max(1, Math.round(base * tm * dirMult * hMult * guardMult));
     let hit = m.acc >= 999 ? 100 : m.acc - Math.round(this.effSpd(defender) * 1.2);
     if (dir === "back") hit += 15;
     if (dir === "side") hit += 7;
@@ -363,7 +365,7 @@ class Battle {
       t.hp = Math.max(0, t.hp - dmg);
       // Schlafende wachen bei Schaden auf
       t.statuses = t.statuses.filter((s) => s.id !== "slp");
-      events.push({ type: "dmg", unit: t, val: dmg, crit, mult: p.mult, dir: p.dir });
+      events.push({ type: "dmg", unit: t, val: dmg, crit, mult: p.mult, dir: p.dir, guarded: t.guarding });
       if (m.drain) {
         const healed = Math.min(attacker.maxHp - attacker.hp, Math.round(dmg * m.drain));
         if (healed > 0) {
@@ -399,6 +401,7 @@ class Battle {
     const events = [];
     let skip = false;
     u.mana = Math.min(u.manaMax, u.mana + MANA_REGEN);
+    u.guarding = false;
     for (const s of [...u.statuses]) {
       if (s.id === "psn" || s.id === "brn") {
         const dmg = Math.max(1, Math.round(u.maxHp * 0.1));

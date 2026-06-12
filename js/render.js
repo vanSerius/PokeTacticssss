@@ -1456,11 +1456,29 @@ class IsoRenderer {
       ctx.fillRect(bx, mby + .5, bw * Math.min(1, u.mana / u.manaMax), 2.4 * z);
     }
 
+    // Schild-Effekt beim Blocken
+    if (u.guarding) {
+      const pulse = .55 + .25 * Math.sin(this.time * 4 + u.x);
+      ctx.save();
+      ctx.globalCompositeOperation = "lighter";
+      ctx.strokeStyle = `rgba(125,211,252,${pulse.toFixed(2)})`;
+      ctx.lineWidth = 2.2 * z;
+      ctx.beginPath();
+      ctx.ellipse(ground.x, ground.y + 1, size * .42, size * .19, 0, 0, Math.PI * 2);
+      ctx.stroke();
+      // schimmernder Bogen vor der Einheit
+      ctx.strokeStyle = `rgba(186,230,253,${(pulse * .9).toFixed(2)})`;
+      ctx.lineWidth = 3 * z;
+      ctx.beginPath();
+      ctx.ellipse(ground.x, footY - dh * .45, size * .38, dh * .5, 0, Math.PI * .15, Math.PI * .85);
+      ctx.stroke();
+      ctx.restore();
+    }
     // Status-Icons
-    if (u.statuses && u.statuses.length) {
+    if (u.statuses && u.statuses.length || u.guarding) {
       ctx.font = `${Math.round(11 * z)}px sans-serif`;
       ctx.textAlign = "center";
-      const icons = u.statuses.map((st) => STATUS[st.id].icon).join("");
+      const icons = (u.guarding ? "🛡" : "") + u.statuses.map((st) => STATUS[st.id].icon).join("");
       ctx.fillText(icons, ground.x, by - 4 * z);
     }
     if (u.boss) {

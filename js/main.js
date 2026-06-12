@@ -167,11 +167,11 @@ async function startNewRun() {
   const offers = sample(PLAYER_POOL, 3).map((sp) => mkEntry(sp, 4));
   const i = await showChoice({
     title: "🎲 Wähle deinen Starter!",
-    sub: "Dein Anführer startet auf Level 4. Zwei zufällige Gefährten begleiten dich.",
+    sub: "Dein Anführer startet auf Level 4. Drei zufällige Gefährten begleiten dich.",
     cards: offers.map((e) => pokemonCard(e)),
   });
   const starter = offers[i];
-  const comps = sample(PLAYER_POOL.filter((s) => s !== starter.sp), 2).map((s) => mkEntry(s, 3));
+  const comps = sample(PLAYER_POOL.filter((s) => s !== starter.sp), 3).map((s) => mkEntry(s, 3));
   Game.save.run = {
     stage: 0, roster: [starter, ...comps], graveyard: [],
     coins: 30, sinceEvent: 0, battleState: null,

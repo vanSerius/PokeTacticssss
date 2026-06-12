@@ -715,7 +715,7 @@ const BATTLES = [
     id: 0, name: "Grüne Ebene", icon: "🌿", ambient: "meadow",
     desc: "Wilde Pokémon versperren den Weg. Ein sanfter Einstieg.",
     intro: "Wilde Pokémon greifen an!\nBesiege alle Gegner.",
-    partySize: 3,
+    partySize: 4,
     heights: [
       "001111000",
       "001122100",

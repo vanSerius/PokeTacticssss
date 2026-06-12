@@ -142,6 +142,7 @@ const BattleUI = (() => {
           if (ev.mult >= 2) renderer.addPopup(u.x, u.y, "Sehr effektiv!", "#4ade80");
           else if (ev.mult > 0 && ev.mult < 1) renderer.addPopup(u.x, u.y, "Wenig effektiv …", "#a9a8c0");
           if (ev.dir === "back") renderer.addPopup(u.x, u.y, "Rückenangriff!", "#ffb03a");
+          if (ev.guarded) renderer.addPopup(u.x, u.y, "🛡 Geblockt!", "#7dd3fc");
           await withTimeout(renderer.animFlash(u), 1200);
           showUnitCard(battle.active);
           break;
@@ -216,7 +217,7 @@ const BattleUI = (() => {
     };
     mk("👣", "Bewegen", state.moved, state.onMove);
     mk("⚔", "Attacken", state.acted, state.onAttack);
-    mk("⏳", "Warten", false, state.onWait);
+    mk(state.acted ? "⏳" : "🛡", state.acted ? "Warten" : "Blocken", false, state.onWait);
     $("#action-bar").classList.remove("hidden");
   }
 
@@ -418,7 +419,8 @@ const BattleUI = (() => {
             : p.mult < 1 ? `<span class="fc-eff-05">wenig effektiv</span>` : "";
           const ally = t.team === u.team ? " ⚠ eigenes Team!" : "";
           const dir = p.dir === "back" ? " · Rücken!" : p.dir === "side" ? " · Flanke" : "";
-          return `<b>${t.name}</b>: ~${p.dmg} Schaden · ${p.hit}% ${eff}${dir}${ally}`;
+          const grd = t.guarding ? " · 🛡 blockt" : "";
+          return `<b>${t.name}</b>: ~${p.dmg} Schaden · ${p.hit}% ${eff}${dir}${grd}${ally}`;
         });
         fc.querySelector(".fc-body").innerHTML = lines.join("<br>") || "Keine Ziele";
         fc.classList.remove("hidden");
@@ -589,6 +591,10 @@ const BattleUI = (() => {
       }
       if (fled) { result = 3; break; }
       battle.endTurn(moved, acted);
+      if (u.alive && u.guarding) {
+        Sfx.chime();
+        renderer.addPopup(u.x, u.y, "🛡 Blockt!", "#7dd3fc");
+      }
       showUnitCard(null);
       result = battle.checkEnd();
       if (result) break;
