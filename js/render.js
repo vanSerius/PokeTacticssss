@@ -833,6 +833,14 @@ class IsoRenderer {
     grad.addColorStop(1, "#0c0e1a");
     ctx.fillStyle = grad;
     ctx.fillRect(0, 0, W, H);
+    // Sterne am Nachthimmel
+    for (let i = 0; i < 40; i++) {
+      const sx = ((i * 1297) % 997) / 997 * W;
+      const sy = ((i * 2161) % 631) / 631 * H * .7;
+      const tw = .25 + .25 * Math.sin(this.time * 1.6 + i * 1.7);
+      ctx.fillStyle = `rgba(220,228,255,${tw.toFixed(2)})`;
+      ctx.fillRect(sx, sy, 1.6, 1.6);
+    }
     if (!b) return;
 
     if (this._shake) {
@@ -840,14 +848,15 @@ class IsoRenderer {
       ctx.translate((Math.random() - .5) * s, (Math.random() - .5) * s);
     }
 
-    // Reihenfolge: hinten -> vorne
+    // Reihenfolge: hinten -> vorne; Tile und Einheit gemeinsam,
+    // damit Bäume/Klippen Einheiten dahinter korrekt verdecken
     const order = [];
     for (let y = 0; y < b.h; y++)
       for (let x = 0; x < b.w; x++) order.push({ x, y });
     order.sort((a, c) => (a.x + a.y) - (c.x + c.y));
 
-    for (const t of order) this._drawTile(t.x, t.y);
     for (const t of order) {
+      this._drawTile(t.x, t.y);
       for (const u of b.unitsRenderAt(t.x, t.y)) this._drawUnit(u);
     }
     for (const f of this.fx) {
@@ -876,9 +885,12 @@ class IsoRenderer {
     if (img && img.complete && img.naturalWidth) {
       // Kenney-Block: Bild liefert Deckfläche + obere Seiten,
       // darunter wird der Sockel in passenden Farben verlängert.
+      // Deko-Tiles (Baum/Kristall) sind höher: Überstand ragt nach OBEN.
       const unit = TILE_W / 132;
+      const groundH = ter.water ? 83 : 99;
+      const extraTop = Math.max(0, img.naturalHeight - groundH) * unit * z;
       const imgH = img.naturalHeight * unit * z;
-      const sideD = (img.naturalHeight - 66) * unit * z;
+      const sideD = (groundH - 66) * unit * z;
       const off = ter.water ? 4 * z : 0;      // Wasser liegt etwas tiefer
       if (depth > sideD) {
         ctx.beginPath();
@@ -898,8 +910,9 @@ class IsoRenderer {
         ctx.fillStyle = ter.side2;
         ctx.fill();
       }
-      ctx.drawImage(img, s.x - hw, s.y - hh + off, TILE_W * z, imgH);
-      if ((x + y) % 2 === 0) {
+      ctx.drawImage(img, s.x - hw, s.y - hh + off - extraTop, TILE_W * z, imgH);
+      this._drawTileDecor(x, y, terKey, s, hw, hh, off, z);
+      if (!ter.block && (x + y) % 2 === 0) {
         // dezentes Schachbrett für Lesbarkeit des Rasters
         ctx.beginPath();
         ctx.moveTo(s.x, s.y - hh + off);
@@ -983,6 +996,61 @@ class IsoRenderer {
       ctx.strokeStyle = "#ffcb05";
       ctx.lineWidth = 3 * this.cam.zoom;
       ctx.stroke();
+    }
+  }
+
+  /* Kleine prozedurale Details: Grasbüschel, Blumen, Kiesel, Glimmen */
+  _drawTileDecor(x, y, terKey, s, hw, hh, off, z) {
+    const ctx = this.ctx;
+    const h = ((x * 73856093) ^ (y * 19349663)) >>> 0;
+    // sichere Punkte innerhalb des Diamanten (relativ zur Mitte)
+    const spots = [[-14, 2], [12, 5], [2, -7], [-5, 9], [16, -3], [-18, -1]];
+    const pick = (i) => {
+      const sp = spots[(h >> (i * 3)) % spots.length];
+      return { px: s.x + sp[0] * z * .9, py: s.y + off + sp[1] * z * .9 };
+    };
+    if (terKey === "g" || terKey === "G" || terKey === "u") {
+      if (h % 10 < 5) {
+        // Grasbüschel: kleine Halm-Fächer
+        for (let i = 0; i < 2; i++) {
+          const { px, py } = pick(i);
+          ctx.strokeStyle = i % 2 ? "#6d9c38" : "#4c7a1f";
+          ctx.lineWidth = 1.2 * z;
+          ctx.lineCap = "round";
+          for (let k = -1; k <= 1; k++) {
+            ctx.beginPath();
+            ctx.moveTo(px, py);
+            ctx.lineTo(px + k * 2.2 * z, py - (4 + Math.abs(k)) * z * .9);
+            ctx.stroke();
+          }
+        }
+      }
+      if (h % 17 === 0) {
+        // Blümchen
+        const { px, py } = pick(3);
+        ctx.fillStyle = (h % 2) ? "#fde047" : "#fef3f8";
+        ctx.beginPath(); ctx.arc(px, py - 2 * z, 1.6 * z, 0, Math.PI * 2); ctx.fill();
+        ctx.fillStyle = "#f59e0b";
+        ctx.beginPath(); ctx.arc(px, py - 2 * z, .7 * z, 0, Math.PI * 2); ctx.fill();
+      }
+    } else if (terKey === "d") {
+      if (h % 10 < 4) {
+        ctx.fillStyle = "rgba(0,0,0,.16)";
+        for (let i = 0; i < 2; i++) {
+          const { px, py } = pick(i);
+          ctx.beginPath();
+          ctx.ellipse(px, py, 2.4 * z, 1.3 * z, 0, 0, Math.PI * 2);
+          ctx.fill();
+        }
+      }
+    } else if (terKey === "p" || terKey === "P") {
+      if (h % 7 === 0) {
+        // unheimliches Glimmen
+        const { px, py } = pick(1);
+        const a = .35 + .3 * Math.sin(this.time * 2.5 + h % 10);
+        ctx.fillStyle = `rgba(196,140,255,${a.toFixed(2)})`;
+        ctx.beginPath(); ctx.arc(px, py - 2 * z, 1.8 * z, 0, Math.PI * 2); ctx.fill();
+      }
     }
   }
 

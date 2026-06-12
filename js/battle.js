@@ -158,6 +158,7 @@ class Battle {
   canStand(u, x, y) {
     if (!this.inBounds(x, y)) return false;
     const ter = TERRAIN[this.terrainAt(x, y)];
+    if (ter.block) return false; // Bäume/Felsen/Kristalle: niemand steht dort
     if (ter.water && !u.swim && !u.fly) return false;
     return true;
   }
@@ -180,7 +181,9 @@ class Battle {
           const dh = Math.abs(this.heightAt(nx, ny) - this.heightAt(cur.x, cur.y));
           if (dh > u.jmp) continue;
         }
-        if (!this.canStand(u, nx, ny)) continue;
+        const ter = TERRAIN[this.terrainAt(nx, ny)];
+        if (ter.block && !u.fly) continue;              // nur Flieger überqueren Hindernisse
+        if (ter.water && !u.swim && !u.fly) continue;
         const occ = this.unitAt(nx, ny);
         if (occ && occ.team !== u.team) continue; // Gegner blockieren
         const node = { x: nx, y: ny, d: cur.d + 1, prev: cur };
@@ -188,10 +191,11 @@ class Battle {
         queue.push(node);
       }
     }
-    // Stehen darf man nur auf freien Feldern
+    // Stehen darf man nur auf freien, betretbaren Feldern
     const tiles = [];
     for (const node of seen.values()) {
       if (node.d === 0) continue;
+      if (!this.canStand(u, node.x, node.y)) continue;
       if (this.unitAt(node.x, node.y)) continue;
       tiles.push(node);
     }
