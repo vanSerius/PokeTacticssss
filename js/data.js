@@ -968,6 +968,20 @@ const BATTLES = [
   },
 ];
 
+/* ---------- Mana ----------
+   Attacken kosten Mana statt PP. Start knapp, +MANA_REGEN je eigener Runde. */
+const MANA_START = 1;
+const MANA_REGEN = 2;
+const MANA_MAX = 8;
+function manaCost(m) {
+  if (m.pp === Infinity) return 0;            // Hieb ist gratis
+  let c;
+  if (m.cat === "s") c = m.heal ? 4 : 3;      // Heilung/Status
+  else c = m.pow <= 45 ? 2 : m.pow <= 60 ? 3 : m.pow <= 78 ? 4 : 5;
+  if (m.aoe) c += 1;                          // Flächenattacken kosten extra
+  return Math.min(6, c);
+}
+
 /* ---------- Roguelike-Run-Konstanten ---------- */
 /* Pool für Starter, Gefährten und Rekruten */
 const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein"];

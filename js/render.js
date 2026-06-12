@@ -113,6 +113,17 @@ function loadTileImages() {
   }
 }
 
+/* Licht-Stimmung & Wetter pro Karten-Thema */
+const THEME_LOOK = {
+  meadow:  { tint: "rgba(255,236,170,.05)", vig: .22 },
+  river:   { tint: "rgba(140,190,255,.06)", vig: .22, rain: .5 },
+  canyon:  { tint: "rgba(255,180,110,.08)", vig: .26 },
+  ghost:   { tint: "rgba(130,110,220,.10)", vig: .38 },
+  storm:   { tint: "rgba(120,140,190,.10)", vig: .30, rain: 1 },
+  arena:   { tint: "rgba(255,170,90,.09)",  vig: .25 },
+  citadel: { tint: "rgba(150,90,220,.12)",  vig: .42 },
+};
+
 /* Foozle "Pixel Magic Effects" (CC0) – Spritesheets, 64×64 je Frame */
 const FX_SHEETS = {
   earthspike: 9, explosion: 7, fireball: 10, moltenspear: 12, portal: 10,
@@ -171,6 +182,8 @@ class IsoRenderer {
     this._flash = 0;
     // Ambiente-Vorbereitung: Kartengrenzen + Spezial-Felder
     this.ambTheme = (battle.def && battle.def.ambient) || "meadow";
+    this.rain = (THEME_LOOK[this.ambTheme] && THEME_LOOK[this.ambTheme].rain) || 0;
+    this.rainDrops = null;
     this.waterTiles = [];
     this.ghostTiles = [];
     for (let y = 0; y < battle.h; y++)
@@ -810,6 +823,20 @@ class IsoRenderer {
           u.ry = p.y + (q.y - p.y) * f;
           u.hop = Math.sin(f * Math.PI) * 8;
           this._faceStep(u, p, q);
+          // Staubwölkchen beim Abstoßen vom Feld
+          if (a.lastIdx !== idx) {
+            a.lastIdx = idx;
+            const c0 = this._tileCenterWorld(p.x, p.y, this.battle.heightAt(p.x, p.y));
+            for (let i = 0; i < 3; i++) {
+              this.particles.push({
+                wx: c0.x + (Math.random() - .5) * 16, wy: c0.y + 2,
+                vx: (Math.random() - .5) * 26 - (q.x - p.x + (q.y - p.y) * -1) * 10,
+                vy: -8 - Math.random() * 10, grav: -14,
+                life: .35 + Math.random() * .2, t: 0,
+                color: "rgba(214,200,170,.7)", size: 1.4 + Math.random() * 1.6,
+              });
+            }
+          }
         }
       } else if (a.type === "lunge") {
         a.t += dt * 4.5;
@@ -912,6 +939,28 @@ class IsoRenderer {
       else if (th === "citadel") { this._spawnAmb("wisp"); }
       if (this.waterTiles.length && th !== "river" && Math.random() < .4) this._spawnAmb("sparkle");
       this._ambTimer = .5 + Math.random() * .6;
+    }
+    // Regentropfen (Bildschirm-Raum)
+    if (this.rain) {
+      const W = this.canvas.clientWidth, H = this.canvas.clientHeight;
+      if (!this.rainDrops) {
+        this.rainDrops = [];
+        const n = Math.round(55 * this.rain);
+        for (let i = 0; i < n; i++) {
+          this.rainDrops.push({
+            x: Math.random() * W, y: Math.random() * H,
+            len: 8 + Math.random() * 10, sp: 380 + Math.random() * 260,
+          });
+        }
+      }
+      for (const d of this.rainDrops) {
+        d.y += d.sp * dt;
+        d.x -= d.sp * .22 * dt;
+        if (d.y > H + 20) { d.y = -20; d.x = Math.random() * (W + 80); }
+        if (d.x < -20) d.x += W + 40;
+      }
+      // Regen nährt die Wasser-Ringe
+      if (this.waterTiles.length && Math.random() < this.rain * dt * 4) this._spawnAmb("ripple");
     }
     // Gewitter-Wetterleuchten
     if (this.ambTheme === "storm" || this.ambTheme === "citadel") {
@@ -1068,6 +1117,28 @@ class IsoRenderer {
       for (const u of b.unitsRenderAt(t.x, t.y)) this._drawUnit(u);
     }
     this._drawAmbient();
+    // Licht-Stimmung der Karte (Farb-Tönung + Vignette)
+    const look = THEME_LOOK[this.ambTheme];
+    if (look) {
+      ctx.fillStyle = look.tint;
+      ctx.fillRect(0, 0, W, H);
+      const vg = ctx.createRadialGradient(W / 2, H / 2, Math.min(W, H) * .35, W / 2, H / 2, Math.max(W, H) * .75);
+      vg.addColorStop(0, "rgba(5,6,16,0)");
+      vg.addColorStop(1, `rgba(5,6,16,${look.vig})`);
+      ctx.fillStyle = vg;
+      ctx.fillRect(0, 0, W, H);
+    }
+    // Regen
+    if (this.rain && this.rainDrops) {
+      ctx.strokeStyle = "rgba(180,205,235,.32)";
+      ctx.lineWidth = 1;
+      ctx.beginPath();
+      for (const d of this.rainDrops) {
+        ctx.moveTo(d.x, d.y);
+        ctx.lineTo(d.x - d.len * .25, d.y + d.len);
+      }
+      ctx.stroke();
+    }
     for (const f of this.fx) {
       ctx.save();
       if (f.additive) ctx.globalCompositeOperation = "lighter"; // Glow
@@ -1376,6 +1447,14 @@ class IsoRenderer {
     const r = Math.max(0, u.hp / u.maxHp);
     ctx.fillStyle = r > .5 ? "#4ade80" : r > .25 ? "#facc15" : "#ef4444";
     ctx.fillRect(bx, by, bw * r, 5 * z);
+    // Mana-Balken (dünn, blau)
+    if (u.manaMax) {
+      const mby = by + 6 * z;
+      ctx.fillStyle = "rgba(0,0,0,.45)";
+      ctx.fillRect(bx - 1, mby, bw + 2, 2.4 * z + 1);
+      ctx.fillStyle = "#38bdf8";
+      ctx.fillRect(bx, mby + .5, bw * Math.min(1, u.mana / u.manaMax), 2.4 * z);
+    }
 
     // Status-Icons
     if (u.statuses && u.statuses.length) {

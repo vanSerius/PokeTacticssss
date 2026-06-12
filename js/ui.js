@@ -71,7 +71,7 @@ const BattleUI = (() => {
       : r > .25 ? "linear-gradient(90deg,#fde047,#facc15)" : "linear-gradient(90deg,#f87171,#ef4444)";
     card.querySelector(".uc-hptext").textContent = `${u.hp}/${u.maxHp}`;
     card.querySelector(".uc-stats").innerHTML =
-      `ANG ${Math.round(battle.effAtk(u))} · VER ${Math.round(battle.effDef(u))} · BEW ${u.mov} · SPR ${u.jmp}` +
+      `<span style="color:#7dd3fc;font-weight:800">⬡ ${u.mana}/${u.manaMax}</span> · ANG ${Math.round(battle.effAtk(u))} · VER ${Math.round(battle.effDef(u))} · BEW ${u.mov}` +
       ` &nbsp; ${u.types.map(typeChipHtml).join(" ")}`;
     card.querySelector(".uc-status").innerHTML = u.statuses
       .map((s) => `<span class="st-chip" style="background:#1f2440;color:${STATUS[s.id].color}">${STATUS[s.id].icon} ${STATUS[s.id].name}</span>`)
@@ -81,9 +81,10 @@ const BattleUI = (() => {
   function showInfoModal(u) {
     $("#info-modal").classList.remove("hidden");
     $("#info-modal .im-name").textContent = `${u.name} – ${u.role} (Lv.${u.lvl})`;
-    const moves = battle.movesOf(u).map((mv) => {
-      const m = MOVES[mv.id];
-      return `<div class="im-move"><b>${m.name}</b> ${typeChipHtml(m.type)} · RW ${m.rng}${m.aoe ? " · Fläche" : ""} · PP ${mv.pp === Infinity ? "∞" : mv.pp}<br><span style="color:var(--ink-dim)">${m.desc}</span></div>`;
+    const moves = battle.movesOf(u).map((id) => {
+      const m = MOVES[id];
+      const c = manaCost(m);
+      return `<div class="im-move"><b>${m.name}</b> ${typeChipHtml(m.type)} · RW ${m.rng}${m.aoe ? " · Fläche" : ""} · ${c === 0 ? "gratis" : "⬡ " + c}<br><span style="color:var(--ink-dim)">${m.desc}</span></div>`;
     }).join("");
     $("#info-modal .im-body").innerHTML = `
       <div>${u.types.map(typeChipHtml).join(" ")} ${u.team === 1 ? "· <b style='color:var(--danger)'>Gegner</b>" : ""}</div>
@@ -343,17 +344,20 @@ const BattleUI = (() => {
         clearMarks();
         const list = $("#skill-list");
         list.innerHTML = "";
-        for (const mv of battle.movesOf(u)) {
-          const m = MOVES[mv.id];
+        $("#skill-menu .sm-head").firstChild.textContent = `Attacke wählen · ⬡ ${u.mana}/${u.manaMax} `;
+        for (const id of battle.movesOf(u)) {
+          const m = MOVES[id];
+          const cost = manaCost(m);
+          const affordable = battle.canAfford(u, id);
           const item = document.createElement("div");
-          item.className = "skill-item" + (mv.pp <= 0 ? " nopp" : "");
+          item.className = "skill-item" + (affordable ? "" : " nopp");
           item.innerHTML = `
             <div class="si-main">
               <div class="si-name">${m.name} ${typeChipHtml(m.type)}</div>
               <div class="si-desc">${m.desc} · RW ${m.rng === 0 ? "Umkreis" : m.rng}${m.aoe ? " · Fläche" : ""}</div>
             </div>
-            <div class="si-pp">${mv.pp === Infinity ? "∞" : mv.pp + " PP"}</div>`;
-          item.addEventListener("click", () => { Sfx.select(); startTarget(mv); });
+            <div class="si-pp" style="${affordable ? "color:#7dd3fc" : ""}">${cost === 0 ? "gratis" : "⬡ " + cost}</div>`;
+          item.addEventListener("click", () => { Sfx.select(); startTarget(id); });
           list.appendChild(item);
         }
         $("#skill-menu").classList.remove("hidden");
@@ -361,13 +365,13 @@ const BattleUI = (() => {
         $("#btn-skill-close").onclick = () => { Sfx.cancel(); setIdle(); };
       }
 
-      function startTarget(mv) {
-        currentMove = mv;
+      function startTarget(moveId) {
+        currentMove = moveId;
         $("#skill-menu").classList.add("hidden");
         clearMarks();
         mode = "target";
-        const m = MOVES[mv.id];
-        const tiles = battle.tilesInRange(u, mv);
+        const m = MOVES[moveId];
+        const tiles = battle.tilesInRange(u, moveId);
         markTiles(tiles, m.target === "foe" ? "attack" : "ally");
         showConfirm();
         $("#btn-confirm").classList.add("hidden");
@@ -375,7 +379,7 @@ const BattleUI = (() => {
       }
 
       function previewTarget(tile) {
-        const m = MOVES[currentMove.id];
+        const m = MOVES[currentMove];
         if (m.rng > 0) {
           const d = Math.abs(tile.x - u.x) + Math.abs(tile.y - u.y);
           if (d < 1 || d > m.rng) return;
@@ -397,7 +401,7 @@ const BattleUI = (() => {
       }
 
       function showForecast(tile) {
-        const m = MOVES[currentMove.id];
+        const m = MOVES[currentMove];
         const aff = battle.affectedUnits(u, currentMove, tile.x, tile.y);
         const fc = $("#forecast");
         fc.querySelector(".fc-title").textContent = m.name;
@@ -426,12 +430,12 @@ const BattleUI = (() => {
         clearMarks();
         hideConfirm();
         battle.setFacingTowards(u, pendingTile.x, pendingTile.y);
-        const m = MOVES[currentMove.id];
+        const m = MOVES[currentMove];
         renderer.centerOnTile(pendingTile.x, pendingTile.y);
         const melee = m.cat === "p" && m.rng <= 1;
         await withTimeout(renderer.animLunge(u, pendingTile.x, pendingTile.y, melee ? .4 : .15), 1200);
         const aoe = battle.aoeTiles(currentMove, pendingTile.x, pendingTile.y);
-        await withTimeout(renderer.animAttackFx(currentMove.id, { x: u.x, y: u.y }, pendingTile, aoe), 3000);
+        await withTimeout(renderer.animAttackFx(currentMove, { x: u.x, y: u.y }, pendingTile, aoe), 3000);
         const events = battle.resolveAttack(u, currentMove, pendingTile.x, pendingTile.y);
         await playEvents(events);
         acted = true;
@@ -497,13 +501,13 @@ const BattleUI = (() => {
     if (decision.action) {
       await renderer.wait(250);
       const mv = decision.action.move;
-      const m = MOVES[mv.id];
+      const m = MOVES[mv];
       battle.setFacingTowards(u, decision.action.x, decision.action.y);
       renderer.centerOnTile(decision.action.x, decision.action.y);
       const melee = m.cat === "p" && m.rng <= 1;
       await withTimeout(renderer.animLunge(u, decision.action.x, decision.action.y, melee ? .4 : .15), 1200);
       const aoe = battle.aoeTiles(mv, decision.action.x, decision.action.y);
-      await withTimeout(renderer.animAttackFx(mv.id, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 3000);
+      await withTimeout(renderer.animAttackFx(mv, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 3000);
       const events = battle.resolveAttack(u, mv, decision.action.x, decision.action.y);
       await playEvents(events);
       acted = true;

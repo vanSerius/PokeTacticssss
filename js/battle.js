@@ -25,7 +25,8 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
     mov: sp.mov + (bonus.mov || 0), jmp: sp.jmp, fly: !!sp.fly, swim: !!sp.swim,
     x, y, rx: x, ry: y, hop: 0, facing: { x: 0, y: 1 },
     ct: Math.floor(Math.random() * 25),
-    moves: moves.map((id) => ({ id, pp: MOVES[id].pp })),
+    moves,                                    // Attacken-IDs
+    mana: MANA_START, manaMax: MANA_MAX,
     statuses: [], buffs: [],
     alive: true, anim: null, alpha: 1, flash: false,
   };
@@ -212,11 +213,14 @@ class Battle {
 
   /* ---------- Attacken-Reichweite ---------- */
   movesOf(u) {
-    return [{ id: "hieb", pp: Infinity }, ...u.moves];
+    return ["hieb", ...u.moves];
+  }
+  canAfford(u, moveId) {
+    return u.mana >= manaCost(MOVES[moveId]);
   }
 
-  tilesInRange(u, move) {
-    const m = MOVES[move.id];
+  tilesInRange(u, moveId) {
+    const m = MOVES[moveId];
     const out = [];
     if (m.rng === 0) { out.push({ x: u.x, y: u.y }); return out; }
     for (let y = 0; y < this.h; y++)
@@ -227,8 +231,8 @@ class Battle {
     return out;
   }
 
-  aoeTiles(move, cx, cy) {
-    const m = MOVES[move.id];
+  aoeTiles(moveId, cx, cy) {
+    const m = MOVES[moveId];
     const out = [{ x: cx, y: cy }];
     if (m.aoe >= 1) {
       const r = m.aoe;
@@ -242,9 +246,9 @@ class Battle {
   }
 
   /* Betroffene Einheiten einer Attacke auf Zielfeld */
-  affectedUnits(attacker, move, cx, cy) {
-    const m = MOVES[move.id];
-    const tiles = this.aoeTiles(move, cx, cy);
+  affectedUnits(attacker, moveId, cx, cy) {
+    const m = MOVES[moveId];
+    const tiles = this.aoeTiles(moveId, cx, cy);
     const units = [];
     for (const t of tiles) {
       const u = this.unitAt(t.x, t.y);
@@ -258,9 +262,9 @@ class Battle {
   }
 
   /* Hat die Attacke auf diesem Zielfeld ein sinnvolles Hauptziel? */
-  validTarget(attacker, move, cx, cy) {
-    const m = MOVES[move.id];
-    const aff = this.affectedUnits(attacker, move, cx, cy);
+  validTarget(attacker, moveId, cx, cy) {
+    const m = MOVES[moveId];
+    const aff = this.affectedUnits(attacker, moveId, cx, cy);
     if (m.target === "self") return aff.includes(attacker);
     if (m.target === "ally") return aff.some((u) => u.team === attacker.team);
     return aff.some((u) => u.team !== attacker.team);
@@ -289,8 +293,8 @@ class Battle {
 
   /* ---------- Schaden ---------- */
   /* Vorhersage ohne Zufall – für die Schadensvorschau */
-  predict(attacker, move, defender) {
-    const m = MOVES[move.id];
+  predict(attacker, moveId, defender) {
+    const m = MOVES[moveId];
     if (m.cat === "s") {
       return { dmg: 0, mult: 1, hit: m.acc >= 999 ? 100 : Math.min(100, m.acc), dir: "front" };
     }
@@ -310,12 +314,12 @@ class Battle {
   }
 
   /* Attacke ausführen -> Liste von Ereignissen für die Animation */
-  resolveAttack(attacker, move, cx, cy) {
-    const m = MOVES[move.id];
-    if (move.pp !== Infinity) move.pp--;
+  resolveAttack(attacker, moveId, cx, cy) {
+    const m = MOVES[moveId];
+    attacker.mana = Math.max(0, attacker.mana - manaCost(m));
     this.setFacingTowards(attacker, cx, cy);
     const events = [];
-    const targets = this.affectedUnits(attacker, move, cx, cy);
+    const targets = this.affectedUnits(attacker, moveId, cx, cy);
 
     for (const t of targets) {
       // Heilung / Buffs
@@ -331,7 +335,7 @@ class Battle {
       }
       if (m.cat === "s") {
         // Status-Attacke: Treffer würfeln
-        const p = this.predict(attacker, move, t);
+        const p = this.predict(attacker, moveId, t);
         const sameTeam = t.team === attacker.team;
         const hitRoll = sameTeam || Math.random() * 100 < p.hit;
         if (!hitRoll) { events.push({ type: "miss", unit: t }); continue; }
@@ -349,7 +353,7 @@ class Battle {
       }
 
       // Schaden
-      const p = this.predict(attacker, move, t);
+      const p = this.predict(attacker, moveId, t);
       if (p.mult === 0) { events.push({ type: "immune", unit: t }); continue; }
       if (Math.random() * 100 >= p.hit) { events.push({ type: "miss", unit: t }); continue; }
       const critCh = (m.crit || 6);
@@ -394,6 +398,7 @@ class Battle {
   startOfTurn(u) {
     const events = [];
     let skip = false;
+    u.mana = Math.min(u.manaMax, u.mana + MANA_REGEN);
     for (const s of [...u.statuses]) {
       if (s.id === "psn" || s.id === "brn") {
         const dmg = Math.max(1, Math.round(u.maxHp * 0.1));
@@ -441,7 +446,7 @@ function aiDecide(battle, u) {
 
   const { tiles, nodes } = battle.reachable(u);
   const standOptions = [{ x: u.x, y: u.y, d: 0 }, ...tiles];
-  const moves = battle.movesOf(u).filter((mv) => mv.pp > 0);
+  const moves = battle.movesOf(u).filter((id) => battle.canAfford(u, id));
 
   let best = null;
 
@@ -449,7 +454,7 @@ function aiDecide(battle, u) {
   for (const pos of standOptions) {
     u.x = pos.x; u.y = pos.y;
     for (const mv of moves) {
-      const m = MOVES[mv.id];
+      const m = MOVES[mv];
       // Selbstheilung, wenn nötig
       if (m.target === "self" && m.heal) {
         if (u.hp < u.maxHp * 0.4) {
