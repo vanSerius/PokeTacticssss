@@ -44,7 +44,9 @@
       <div class="howto-block"><b>🔥 Typen</b><br>Das klassische Typensystem gilt: Wasser löscht Feuer, Elektro schockt Flieger … Sehr effektive Treffer machen doppelten Schaden.</div>
       <div class="howto-block"><b>⬡ Mana</b><br>Attacken kosten <b>Mana</b> (2–6, Flächenattacken extra) – der einfache <b>Hieb ist gratis</b>. Jedes Pokémon startet knapp und regeneriert <b>+2 Mana pro eigener Runde</b> (blauer Balken). Wer seinen Zug <b>ohne Angriff</b> beendet, geht ins <b>🛡 Blocken</b>: −25 % Schaden bis zum nächsten eigenen Zug.</div>
       <div class="howto-block"><b>🎲 Roguelike-Run</b><br>Jeder Run startet mit einem von drei zufälligen <b>Startern</b> plus zwei Gefährten. Nach jedem Sieg wählst du einen von zwei <b>Rekruten</b> – oder lehnst ab für Extra-EP. <b>Wer im Kampf fällt, ist tot</b> (Pokécenter & Beleber können helfen). KP bleiben zwischen Kämpfen erhalten; nach Siegen verschnauft das Team (+25 %).</div>
-      <div class="howto-block"><b>🎒 Relikte & Karten-Vielfalt</b><br>Nach den Etappen 2, 4 und 6 wählst du eines von drei <b>Relikten</b> – passive Boni für den ganzen Run (mehr Münzen, +Mana, Dornenpanzer, Phönixfeder …). Die <b>Karten werden pro Run gewürfelt</b>: Jede Etappe hat mehrere mögliche Schlachtfelder.</div>
+      <div class="howto-block"><b>🛤 Wähle deinen Weg</b><br>Vor jeder Etappe stehen <b>zwei Wege</b> zur Wahl: ein normaler und ein <b>⭐ ELITE-Weg</b> (Gegner +2 Level). Elite lohnt sich: <b>1,5× Beute und eine Relikt-Wahl</b> (1 aus 3 passiven Run-Boni wie Phönixfeder, Dornenpanzer, Mana-Kristall). Sobald du einen Kampf betrittst, ist der Weg festgeschrieben!</div>
+      <div class="howto-block"><b>🔥 Endlos-Modus</b><br>Nach dem Sieg über Mewtu kannst du <b>weiterkämpfen</b>: zufällige Karten mit immer stärkeren Gegnern. Deine beste Tiefe wird als Rekord gespeichert.</div>
+      <div class="howto-block"><b>🔍 Profi-Werkzeuge</b><br>Tippe im Kampf auf einen <b>Gegner</b>, um seine <b>Gefahrenzone</b> zu sehen (zweiter Tipp: Details). <b>↩ Zurück</b> macht eine Bewegung rückgängig, solange du nicht angegriffen hast. 📜 öffnet das Kampf-Log. Entwicklungen gehen jetzt bis zur <b>dritten Stufe</b> (Glurak, Turtok, Bisaflor, Simsala …)!</div>
       <div class="howto-block"><b>⚔ Rückschlag statt Game Over</b><br>Wird dein Trupp besiegt, stellst du aus den <b>verbliebenen Pokémon</b> den nächsten auf – die Gegner <b>behalten ihre Wunden</b>! Erst wenn kein Pokémon mehr lebt, endet der Run. Unterwegs warten <b>Zufallsbegegnungen</b>: Pokécenter, Wanderhändler (Münzen!), Lagerfeuer …</div>
       <div class="howto-block"><b>⭐ Level-Up-Karten</b><br>Bei jedem Level-Up wählst du eine von drei Karten: <b>neue Attacke</b> (ersetzt ggf. eine alte), <b>+KP</b>, <b>+Angriff</b>, <b>+Verteidigung</b>, <b>+Tempo</b> oder selten <b>+Bewegung</b>. Ersatzbank-Pokémon erhalten halbe EP.</div>
       <div class="howto-block"><b>✨ Entwicklung</b><br>Ab <b>Level 5</b> kann sich ein Pokémon entwickeln – <b>deine Entscheidung!</b> Die Entwicklung setzt auf <b>Level 1</b> zurück, bringt aber deutlich höhere Basiswerte, das Basis-Moveset der neuen Form und dadurch schnellere Level-Ups (= mehr Karten). Gesammelte Karten-Boni bleiben erhalten. Wer ablehnt, wird beim nächsten Level-Up erneut gefragt.</div>
@@ -105,6 +107,7 @@
     <div id="battle-list" class="battle-list"></div>
     <div class="map-foot">
       <button id="btn-roster" class="btn big">👥 Team ansehen</button>
+      <button id="btn-endquit" class="btn big hidden" style="margin-top:8px">🏁 Run als Champion beenden</button>
     </div>
   </div>
 </div>
@@ -150,6 +153,7 @@
   <div id="hud-top">
     <div id="turn-order"></div>
     <div id="hud-top-right">
+      <button id="btn-log" class="btn icon">📜</button>
       <button id="btn-sound" class="btn icon">🔊</button>
       <button id="btn-flee" class="btn icon">🏳</button>
     </div>

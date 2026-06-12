@@ -420,3 +420,11 @@ input[type="range"]::-webkit-slider-thumb {
   border-radius: 12px; padding: 7px 12px; margin-bottom: 10px;
   font-size: 1.25rem; cursor: pointer;
 }
+
+/* ---------- Elite-Wege ---------- */
+.battle-item.elite { border-color: rgba(255,203,5,.55); background: linear-gradient(180deg, rgba(255,203,5,.08), var(--panel)); }
+.elite-badge {
+  font-size: .62rem; font-weight: 900; letter-spacing: .5px;
+  background: linear-gradient(180deg,#ffd84d,var(--accent)); color: #4a3a00;
+  border-radius: 8px; padding: 1px 7px; vertical-align: middle;
+}

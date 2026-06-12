@@ -255,7 +255,7 @@ class IsoRenderer {
     const b = this.battle;
     const h = b ? b.heightAt(x, y) : 0;
     const c = this._tileCenterWorld(x, y, h);
-    if (instant) { this.cam.x = c.x; this.cam.y = c.y; }
+    if (instant) { this.cam.x = c.x; this.cam.y = c.y; this.targetCam = null; }
     else this.targetCam = { x: c.x, y: c.y };
   }
 
@@ -1280,6 +1280,7 @@ class IsoRenderer {
         aoe:    "rgba(255,170,40,.6)",
         path:   "rgba(120,220,255,.65)",
         ally:   "rgba(74,222,128,.5)",
+        danger: "rgba(239,68,68,.26)",
       };
       ctx.beginPath();
       ctx.moveTo(s.x, s.y - hh + 2);

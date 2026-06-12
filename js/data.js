@@ -150,7 +150,7 @@ const SPECIES = {
     evoLvl: 9, evoTo: "glutexo",
   },
   glutexo: {
-    dex: 5, name: "Glutexo", role: "Flammenritter", types: ["fire"], sprite: "glumanda",
+    dex: 5, name: "Glutexo", role: "Flammenritter", types: ["fire"], sprite: "glumanda", evoTo: "glurak",
     recolor: { "#fb923c": "#ef4444", "#ea580c": "#b91c1c" }, scale: 1.12,
     base: [54, 23, 17, 11], grow: [4.2, 2.0, 1.6, 0], mov: 4, jmp: 2,
     learn: [[1,"tackle"],[1,"glut"],[1,"feuerwirbel"],[1,"flammenwurf"]],
@@ -162,7 +162,7 @@ const SPECIES = {
     evoLvl: 10, evoTo: "schillok",
   },
   schillok: {
-    dex: 8, name: "Schillok", role: "Flutgarde", types: ["water"], sprite: "schiggy",
+    dex: 8, name: "Schillok", role: "Flutgarde", types: ["water"], sprite: "schiggy", evoTo: "turtok",
     recolor: { "#60a5fa": "#6366f1", "#2563eb": "#4338ca" }, scale: 1.12,
     base: [58, 20, 22, 10], grow: [4.4, 1.8, 1.9, 0], mov: 3, jmp: 2, swim: true,
     learn: [[1,"tackle"],[1,"aquaknarre"],[1,"panzerschutz"],[1,"blubbstrahl"],[11,"hydropumpe"]],
@@ -174,7 +174,7 @@ const SPECIES = {
     evoLvl: 10, evoTo: "bisaknosp",
   },
   bisaknosp: {
-    dex: 2, name: "Bisaknosp", role: "Erzdruide", types: ["grass","poison"], sprite: "bisasam",
+    dex: 2, name: "Bisaknosp", role: "Erzdruide", types: ["grass","poison"], sprite: "bisasam", evoTo: "bisaflor",
     recolor: { "#22c55e": "#ec4899", "#15803d": "#be185d", "#2dd4bf": "#0d9488" }, scale: 1.12,
     base: [56, 21, 18, 10], grow: [4.3, 1.9, 1.7, 0], mov: 3, jmp: 2,
     learn: [[1,"tackle"],[1,"rankenhieb"],[1,"megasauger"],[1,"schlafpuder"],[1,"rasierblatt"]],
@@ -191,7 +191,7 @@ const SPECIES = {
     evoLvl: 11, evoTo: "maschock",
   },
   maschock: {
-    dex: 67, name: "Maschock", role: "Großmeister", types: ["fighting"], sprite: "machollo",
+    dex: 67, name: "Maschock", role: "Großmeister", types: ["fighting"], sprite: "machollo", evoTo: "machomei",
     recolor: { "#94a3b8": "#a78bfa", "#64748b": "#7c3aed" }, scale: 1.12,
     base: [60, 25, 18, 9], grow: [4.6, 2.2, 1.7, 0], mov: 4, jmp: 2,
     learn: [[1,"karateschlag"],[1,"protzer"],[1,"geowurf"],[1,"bodyslam"]],
@@ -203,7 +203,7 @@ const SPECIES = {
     evoLvl: 12, evoTo: "kadabra",
   },
   kadabra: {
-    dex: 64, name: "Kadabra", role: "Erzmystiker", types: ["psychic"], sprite: "abra",
+    dex: 64, name: "Kadabra", role: "Erzmystiker", types: ["psychic"], sprite: "abra", evoTo: "simsala",
     recolor: { "#fde047": "#fbbf24", "#a16207": "#78350f" }, scale: 1.12,
     base: [44, 24, 12, 13], grow: [3.6, 2.2, 1.2, 0], mov: 4, jmp: 3,
     learn: [[1,"konfusion"],[1,"barriere"],[1,"psystrahl"],[1,"genesung"],[1,"psychokinese"]],
@@ -215,7 +215,7 @@ const SPECIES = {
     evoLvl: 11, evoTo: "alpollo",
   },
   alpollo: {
-    dex: 93, name: "Alpollo", role: "Phantom", types: ["ghost","poison"], sprite: "nebulak",
+    dex: 93, name: "Alpollo", role: "Phantom", types: ["ghost","poison"], sprite: "nebulak", evoTo: "gengar",
     recolor: { "#a78bfa": "#7c3aed", "#6d28d9": "#4c1d95" }, scale: 1.12,
     base: [48, 23, 13, 13], grow: [3.8, 2.1, 1.3, 0], mov: 4, jmp: 5, fly: true,
     learn: [[1,"schlecker"],[1,"nachtnebel"],[1,"hypnose"],[1,"spukball"]],
@@ -227,7 +227,7 @@ const SPECIES = {
     evoLvl: 11, evoTo: "georok",
   },
   georok: {
-    dex: 75, name: "Georok", role: "Felsbastion", types: ["rock","ground"], sprite: "kleinstein",
+    dex: 75, name: "Georok", role: "Felsbastion", types: ["rock","ground"], sprite: "kleinstein", evoTo: "geowaz",
     recolor: { "#a8a29e": "#78716c", "#78716c": "#44403c" }, scale: 1.18,
     base: [60, 23, 26, 6], grow: [4.4, 2.1, 2.2, 0], mov: 3, jmp: 1,
     learn: [[1,"steinwurf"],[1,"haertner"],[1,"intensitaet"],[1,"steinhagel"]],
@@ -236,6 +236,48 @@ const SPECIES = {
     dex: 143, name: "Relaxo", role: "Koloss", types: ["normal"], sprite: "relaxo",
     base: [70, 20, 18, 5], grow: [5.5, 2.0, 1.8, 0], mov: 3, jmp: 1,
     learn: [[1,"bodyslam"],[1,"erholung"],[1,"heuler"]],
+  },
+
+  /* === Dritte Entwicklungsstufen (V2.5) === */
+  glurak: {
+    dex: 6, name: "Glurak", role: "Himmelsdrache", types: ["fire","flying"], sprite: "glumanda",
+    base: [66, 28, 20, 12], grow: [4.8, 2.3, 1.8, 0], mov: 4, jmp: 5, fly: true,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"fluegelschlag"],[1,"biss"]],
+  },
+  turtok: {
+    dex: 9, name: "Turtok", role: "Panzerfestung", types: ["water"], sprite: "schiggy",
+    base: [70, 24, 26, 10], grow: [5.0, 2.0, 2.2, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"hydropumpe"],[1,"blubbstrahl"],[1,"panzerschutz"],[1,"bodyslam"]],
+  },
+  bisaflor: {
+    dex: 3, name: "Bisaflor", role: "Urwaldkoloss", types: ["grass","poison"], sprite: "bisasam",
+    base: [68, 25, 22, 10], grow: [4.9, 2.1, 2.0, 0], mov: 3, jmp: 2,
+    learn: [[1,"rasierblatt"],[1,"megasauger"],[1,"schlafpuder"],[1,"saeure"]],
+  },
+  simsala: {
+    dex: 65, name: "Simsala", role: "Erzmagier", types: ["psychic"], sprite: "abra",
+    base: [54, 30, 14, 14], grow: [4.0, 2.5, 1.4, 0], mov: 4, jmp: 3,
+    learn: [[1,"psychokinese"],[1,"psystrahl"],[1,"barriere"],[1,"genesung"]],
+  },
+  machomei: {
+    dex: 68, name: "Machomei", role: "Vier-Arm-Titan", types: ["fighting"], sprite: "machollo",
+    base: [72, 30, 21, 9], grow: [5.2, 2.5, 1.9, 0], mov: 4, jmp: 2,
+    learn: [[1,"karateschlag"],[1,"geowurf"],[1,"bodyslam"],[1,"protzer"]],
+  },
+  gengar: {
+    dex: 94, name: "Gengar", role: "Schattenfürst", types: ["ghost","poison"], sprite: "nebulak",
+    base: [58, 28, 16, 14], grow: [4.2, 2.4, 1.5, 0], mov: 5, jmp: 5, fly: true,
+    learn: [[1,"spukball"],[1,"hypnose"],[1,"nachtnebel"],[1,"saeure"]],
+  },
+  geowaz: {
+    dex: 76, name: "Geowaz", role: "Bergriese", types: ["rock","ground"], sprite: "kleinstein",
+    base: [74, 27, 30, 7], grow: [5.2, 2.3, 2.5, 0], mov: 3, jmp: 1,
+    learn: [[1,"steinhagel"],[1,"intensitaet"],[1,"geowurf"],[1,"haertner"]],
+  },
+  sarzenia: {
+    dex: 71, name: "Sarzenia", role: "Fleischfresser", types: ["grass","poison"], sprite: "bisasam",
+    base: [64, 28, 17, 11], grow: [4.7, 2.4, 1.6, 0], mov: 4, jmp: 2,
+    learn: [[1,"rasierblatt"],[1,"saeure"],[1,"schlafpuder"],[1,"biss"]],
   },
 
   /* === Neue Spieler-Pokémon (Run-Vielfalt) === */
@@ -268,7 +310,7 @@ const SPECIES = {
     evoTo: "ultrigaria",
   },
   ultrigaria: {
-    dex: 70, name: "Ultrigaria", role: "Würgranke", types: ["grass","poison"], sprite: "bisasam",
+    dex: 70, name: "Ultrigaria", role: "Würgranke", types: ["grass","poison"], sprite: "bisasam", evoTo: "sarzenia",
     base: [52, 24, 14, 10], grow: [4.1, 2.2, 1.3, 0], mov: 3, jmp: 2,
     learn: [[1,"rankenhieb"],[1,"saeure"],[1,"schlafpuder"],[1,"rasierblatt"]],
   },

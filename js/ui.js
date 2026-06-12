@@ -27,6 +27,22 @@ const BattleUI = (() => {
   let renderer = null;
   let battle = null;
   let abortPlayerTurn = null;
+  let logLines = [];
+
+  function log(msg) {
+    logLines.push(msg);
+    if (logLines.length > 60) logLines.shift();
+  }
+
+  function showLog() {
+    $("#info-modal").classList.remove("hidden");
+    $("#info-modal .im-name").textContent = "📜 Kampf-Log";
+    $("#info-modal .im-body").innerHTML = logLines.length
+      ? logLines.map((l) => `<div class="im-move">${l}</div>`).join("")
+      : "<div class='im-move'>Noch nichts passiert.</div>";
+    const body = $("#info-modal .im-body");
+    body.scrollTop = body.scrollHeight;
+  }
 
   function init() {
     renderer = new IsoRenderer($("#battle-canvas"));
@@ -58,6 +74,11 @@ const BattleUI = (() => {
       hp.className = "to-hp";
       hp.innerHTML = `<div style="width:${Math.round((u.hp / u.maxHp) * 100)}%"></div>`;
       chip.appendChild(hp);
+      chip.addEventListener("click", () => {
+        Sfx.tap();
+        renderer.centerOnTile(u.x, u.y);
+        showUnitCard(u);
+      });
       el.appendChild(chip);
     });
   }
@@ -138,6 +159,7 @@ const BattleUI = (() => {
     const u = ev.unit;
     switch (ev.type) {
         case "dmg": {
+          log(`→ ${u.name}: <b style="color:var(--danger)">-${ev.val}</b>${ev.crit ? " ⚡Volltreffer" : ""}${ev.mult >= 2 ? " (sehr effektiv)" : ""}`);
           renderer.centerOnTile(u.x, u.y);
           if (ev.crit) { Sfx.crit(); renderer.shake(9); vibrate(40); }
           else { Sfx.hit(); renderer.shake(5); vibrate(20); }
@@ -153,12 +175,14 @@ const BattleUI = (() => {
           break;
         }
         case "heal":
+          log(`→ ${u.name}: <b style="color:var(--good)">+${ev.val} KP</b>`);
           Sfx.heal();
           renderer.burst(u.x, u.y, "#4ade80", 10);
           renderer.addPopup(u.x, u.y, "+" + ev.val, "#4ade80");
           await renderer.wait(420);
           break;
         case "miss":
+          log(`→ ${u.name}: verfehlt`);
           Sfx.miss();
           renderer.addPopup(u.x, u.y, "Daneben!", "#cbd5e1");
           await renderer.wait(420);
@@ -201,6 +225,7 @@ const BattleUI = (() => {
           await renderer.wait(500);
           break;
         case "ko":
+          log(`💀 <b>${u.name}</b> ist besiegt!`);
           Sfx.ko();
           renderer.shake(7);
           renderer.addPopup(u.x, u.y, "K.O.!", "#ef4444", true);
@@ -227,6 +252,7 @@ const BattleUI = (() => {
     };
     mk("👣", "Bewegen", state.moved, state.onMove);
     mk("⚔", "Attacken", state.acted, state.onAttack);
+    if (state.canUndo) mk("↩", "Zurück", false, state.onUndo);
     mk(state.acted ? "⏳" : "🛡", state.acted ? "Warten" : "Blocken", false, state.onWait);
     $("#action-bar").classList.remove("hidden");
   }
@@ -239,16 +265,34 @@ const BattleUI = (() => {
       let mode = "idle";          // idle | move | move-confirm | target | aoe-confirm
       let moved = false, acted = false;
       let reach = null, currentMove = null, pendingTile = null, pendingPath = null;
+      let preMove = null;         // für Bewegungs-Undo
+      let dangerFor = null;       // Gegner, dessen Gefahrenzone angezeigt wird
 
       const refreshBar = () => buildActionBar({
         moved, acted,
+        canUndo: moved && !acted && !!preMove,
         onMove: startMove,
         onAttack: openSkillMenu,
+        onUndo: undoMove,
         onWait: startFacing,
       });
 
+      function undoMove() {
+        if (!preMove) return;
+        Sfx.cancel();
+        u.x = preMove.x; u.y = preMove.y;
+        u.rx = u.x; u.ry = u.y;
+        u.facing = preMove.facing;
+        preMove = null;
+        moved = false;
+        renderer.centerOnTile(u.x, u.y);
+        updateTurnOrder();
+        setIdle();
+      }
+
       function setIdle() {
         mode = "idle";
+        dangerFor = null;
         clearMarks();
         hideConfirm();
         if (battle.checkEnd()) { finish(); return; }
@@ -329,6 +373,7 @@ const BattleUI = (() => {
         mode = "busy";
         clearMarks();
         hideConfirm();
+        preMove = { x: u.x, y: u.y, facing: { ...u.facing } };
         Sfx.move();
         await withTimeout(renderer.animMove(u, pendingPath), pendingPath.length * 250 + 1500);
         u.x = pendingTile.x; u.y = pendingTile.y;
@@ -443,6 +488,7 @@ const BattleUI = (() => {
         hideConfirm();
         battle.setFacingTowards(u, pendingTile.x, pendingTile.y);
         const m = MOVES[currentMove];
+        log(`<b>${u.name}</b> setzt <b>${m.name}</b> ein`);
         renderer.centerOnTile(pendingTile.x, pendingTile.y);
         const melee = m.cat === "p" && m.rng <= 1;
         await withTimeout(renderer.animLunge(u, pendingTile.x, pendingTile.y, melee ? .4 : .15), 1200);
@@ -481,9 +527,23 @@ const BattleUI = (() => {
           previewTarget(tile);
           return;
         }
-        // Idle: Einheiten-Info
+        // Idle: Gegner-Tap zeigt Gefahrenzone, zweiter Tap die Details
         const tu = battle.unitAt(tile.x, tile.y);
-        if (tu) { showInfoModal(tu); }
+        if (tu && tu.team === 1 && tu !== dangerFor) {
+          clearMarks();
+          dangerFor = tu;
+          for (const key of battle.dangerZone(tu)) renderer.highlights.set(key, "danger");
+          showUnitCard(tu);
+          renderer.addPopup(tu.x, tu.y, "⚠ Gefahrenzone", "#f87171");
+          return;
+        }
+        if (tu) { showInfoModal(tu); return; }
+        // leeres Feld: Anzeige zurücksetzen
+        if (dangerFor) {
+          dangerFor = null;
+          clearMarks();
+          showUnitCard(u);
+        }
       };
 
       $("#btn-confirm").onclick = () => {
@@ -514,6 +574,7 @@ const BattleUI = (() => {
       await renderer.wait(250);
       const mv = decision.action.move;
       const m = MOVES[mv];
+      log(`<b>${u.name}</b> setzt <b>${m.name}</b> ein`);
       battle.setFacingTowards(u, decision.action.x, decision.action.y);
       renderer.centerOnTile(decision.action.x, decision.action.y);
       const melee = m.cat === "p" && m.rng <= 1;
@@ -539,9 +600,9 @@ const BattleUI = (() => {
   }
 
   /* ---------- Hauptschleife ---------- */
-  async function run(def, partyEntries, enemyState = null, relics = []) {
+  async function run(def, partyEntries, enemyState = null, relics = [], mods = {}) {
     Music.battleTheme = (def.ambient === "ghost" || def.ambient === "citadel") ? "dark" : "battle";
-    battle = new Battle(def, partyEntries, enemyState, relics);
+    battle = new Battle(def, partyEntries, enemyState, relics, mods);
     showScreen("#screen-battle");
     renderer.resize();          // Canvas war evtl. unsichtbar (Größe 0)
     renderer.setBattle(battle);
@@ -550,6 +611,9 @@ const BattleUI = (() => {
     showUnitCard(null);
     updateTurnOrder();
 
+    logLines = [];
+    log(`${def.icon} <b>${def.name}</b> beginnt`);
+    $("#btn-log").onclick = () => { Sfx.tap(); showLog(); };
     let fled = false;
     $("#btn-flee").onclick = () => {
       if (confirm("Schlacht wirklich aufgeben?")) {

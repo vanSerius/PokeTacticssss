@@ -35,9 +35,10 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
 class Battle {
   /* enemyState: KP-Reste aus vorherigem Versuch (Index = Gegner-Index, 0 = tot)
      relics: passive Run-Items (wirken nur für Team 0) */
-  constructor(def, partyEntries, enemyState = null, relics = []) {
+  constructor(def, partyEntries, enemyState = null, relics = [], mods = {}) {
     this.def = def;
     this.relics = relics || [];
+    this.lvlBoost = mods.lvlBoost || 0;   // Elite-/Endlos-Verstärkung
     this.h = def.heights.length;
     this.w = def.heights[0].length;
     this.heights = def.heights.map((r) => [...r].map(Number));
@@ -56,7 +57,7 @@ class Battle {
     def.enemies.forEach((e, i) => {
       const hpLeft = enemyState ? enemyState[i] : undefined;
       if (hpLeft !== undefined && hpLeft !== null && hpLeft <= 0) return; // bereits besiegt
-      const u = makeUnit(e.sp, e.lvl, 1, e.x, e.y, e.boss);
+      const u = makeUnit(e.sp, e.lvl + this.lvlBoost, 1, e.x, e.y, e.boss);
       if (hpLeft !== undefined && hpLeft !== null) u.hp = Math.min(u.hp, hpLeft);
       u.enemyIdx = i;
       this.units.push(u);
@@ -275,6 +276,28 @@ class Battle {
     if (m.target === "self") return aff.includes(attacker);
     if (m.target === "ally") return aff.some((u) => u.team === attacker.team);
     return aff.some((u) => u.team !== attacker.team);
+  }
+
+  /* Gefahrenzone eines Gegners: alle Felder, die er erreichen + angreifen kann */
+  dangerZone(u) {
+    const marks = new Set();
+    const { tiles } = this.reachable(u);
+    const stands = [{ x: u.x, y: u.y }, ...tiles];
+    let maxR = 1;
+    for (const id of this.movesOf(u)) {
+      const m = MOVES[id];
+      if (m.target === "foe" && m.rng > maxR) maxR = m.rng;
+    }
+    for (const s of stands) {
+      for (let dy = -maxR; dy <= maxR; dy++) {
+        const rest = maxR - Math.abs(dy);
+        for (let dx = -rest; dx <= rest; dx++) {
+          const x = s.x + dx, y = s.y + dy;
+          if (this.inBounds(x, y)) marks.add(x + "," + y);
+        }
+      }
+    }
+    return marks;
   }
 
   /* ---------- Ausrichtung / Flanken ---------- */

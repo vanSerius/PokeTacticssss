@@ -48,9 +48,17 @@ function healEntry(e, amount) {
 /* Alte Runs ohne neue Felder nachrüsten */
 function migrateRun(run) {
   if (!run) return;
-  if (!run.battleSeq) run.battleSeq = STAGE_POOLS.map((p) => p[0]);
   if (!run.relics) run.relics = [];
   if (run.phoenixUsed === undefined) run.phoenixUsed = false;
+  if (!run.eliteIdx) run.eliteIdx = STAGE_POOLS.map((p) => p.length > 1 ? Math.floor(Math.random() * p.length) : -1);
+  if (!run.played) {
+    run.played = [];
+    if (run.battleSeq) {
+      for (let s = 0; s < run.stage; s++) run.played[s] = { id: run.battleSeq[s], elite: false };
+    }
+  }
+  if (run.endless === undefined) run.endless = false;
+  if (!run.endlessPlan) run.endlessPlan = {};
 }
 
 function hasRelic(id) {
@@ -58,8 +66,27 @@ function hasRelic(id) {
   return !!(run && run.relics && run.relics.includes(id));
 }
 
-function stageBattle(stage) {
-  return BATTLES[Game.save.run.battleSeq[stage]];
+/* Optionen für eine Etappe: [{id, elite}] – nach Kampfstart festgeschrieben */
+const ENDLESS_MAP_IDS = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12];
+function stageOptions(stage) {
+  const run = Game.save.run;
+  if (run.played[stage]) return [run.played[stage]];
+  if (stage < STAGE_POOLS.length) {
+    const pool = STAGE_POOLS[stage];
+    if (pool.length === 1) return [{ id: pool[0], elite: false }];
+    return pool.map((id, i) => ({ id, elite: i === run.eliteIdx[stage] }));
+  }
+  // Endlos-Modus: Plan bei Bedarf würfeln
+  if (!run.endlessPlan[stage]) {
+    run.endlessPlan[stage] = { ids: sample(ENDLESS_MAP_IDS, 2), eliteIdx: Math.floor(Math.random() * 2) };
+    writeSave();
+  }
+  const plan = run.endlessPlan[stage];
+  return plan.ids.map((id, i) => ({ id, elite: i === plan.eliteIdx }));
+}
+
+function endlessDepth(stage) {
+  return Math.max(0, stage - (STAGE_POOLS.length - 1));
 }
 
 function avgRosterLvl() {
@@ -170,9 +197,10 @@ function updateTitle() {
   const best = Game.save && Game.save.best;
   if (best && (best.stage > 0 || best.wins > 0)) {
     rec.classList.remove("hidden");
-    rec.textContent = best.wins > 0
+    rec.textContent = (best.wins > 0
       ? `🏆 Champion-Siege: ${best.wins} · Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`
-      : `📜 Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`;
+      : `📜 Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`)
+      + (best.endless ? ` · 🔥 Endlos-Tiefe ${best.endless}` : "");
   } else {
     rec.classList.add("hidden");
   }
@@ -192,7 +220,8 @@ async function startNewRun() {
   Game.save.run = {
     stage: 0, roster: [starter, ...comps], graveyard: [],
     coins: 30, sinceEvent: 0, battleState: null,
-    battleSeq: STAGE_POOLS.map((pool) => sample(pool, 1)[0]),
+    eliteIdx: STAGE_POOLS.map((p) => p.length > 1 ? Math.floor(Math.random() * p.length) : -1),
+    played: [], endless: false, endlessPlan: {},
     relics: [], phoenixUsed: false,
   };
   writeSave();
@@ -211,8 +240,9 @@ function renderBattleList() {
   migrateRun(run);
   const el = $("#battle-list");
   el.innerHTML = "";
-  $(".map-head h2").innerHTML =
-    `🗺 Etappe ${Math.min(run.stage + 1, STAGE_POOLS.length)}/${STAGE_POOLS.length} · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
+  $(".map-head h2").innerHTML = run.endless && run.stage >= STAGE_POOLS.length
+    ? `🔥 Endlos-Tiefe ${endlessDepth(run.stage)} · 🪙 ${run.coins} · 👥 ${run.roster.length}`
+    : `🗺 Etappe ${Math.min(run.stage + 1, STAGE_POOLS.length)}/${STAGE_POOLS.length} · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
   // Relikt-Zeile
   const relicRow = $("#relic-row");
   if (run.relics.length) {
@@ -231,25 +261,66 @@ function renderBattleList() {
   } else {
     relicRow.classList.add("hidden");
   }
-  for (let stage = 0; stage < STAGE_POOLS.length; stage++) {
-    const b = stageBattle(stage);
+  const maxStage = Math.max(run.stage, STAGE_POOLS.length - 1);
+  for (let stage = 0; stage <= maxStage; stage++) {
     const done = stage < run.stage;
     const current = stage === run.stage;
-    const weakened = current && run.battleState && run.battleState.stage === b.id;
-    const item = document.createElement("div");
-    item.className = "battle-item" + (done ? " done" : "") + (!done && !current ? " locked" : "");
-    item.innerHTML = `
-      <div class="bi-num">${b.icon}</div>
-      <div class="bi-main">
-        <div class="bi-name">${stage + 1}. ${b.name}</div>
-        <div class="bi-desc">${weakened ? "⚔ Die Gegner sind bereits verwundet – weiter geht's!" : b.desc}</div>
-      </div>
-      <div class="bi-state">${done ? "✅" : current ? "▶" : "🔒"}</div>`;
-    if (current) {
-      item.addEventListener("click", () => { Sfx.select(); openPartySelect(b); });
+    if (done) {
+      const p = run.played[stage];
+      const b = p ? BATTLES[p.id] : null;
+      const item = document.createElement("div");
+      item.className = "battle-item done";
+      item.innerHTML = `
+        <div class="bi-num">${b ? b.icon : "✅"}</div>
+        <div class="bi-main">
+          <div class="bi-name">${stage + 1}. ${b ? b.name : "Geschafft"}${p && p.elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}</div>
+          <div class="bi-desc">Abgeschlossen</div>
+        </div>
+        <div class="bi-state">✅</div>`;
+      el.appendChild(item);
+      continue;
     }
-    el.appendChild(item);
+    if (!current) {
+      const item = document.createElement("div");
+      item.className = "battle-item locked";
+      item.innerHTML = `
+        <div class="bi-num">❓</div>
+        <div class="bi-main">
+          <div class="bi-name">${stage + 1}. Unbekannter Weg</div>
+          <div class="bi-desc">Wird nach der nächsten Etappe sichtbar.</div>
+        </div>
+        <div class="bi-state">🔒</div>`;
+      el.appendChild(item);
+      continue;
+    }
+    // Aktuelle Etappe: Weg wählen (oder festgeschriebener Kampf)
+    const options = stageOptions(stage);
+    if (options.length > 1) {
+      const head = document.createElement("div");
+      head.className = "roster-divider";
+      head.textContent = `⚔ Etappe ${stage + 1}: Wähle deinen Weg!`;
+      el.appendChild(head);
+    }
+    for (const opt of options) {
+      const b = BATTLES[opt.id];
+      const weakened = run.battleState && run.battleState.stage === b.id && !!run.battleState.elite === !!opt.elite;
+      const boost = (opt.elite ? 2 : 0) + endlessDepth(stage) * 2 + (endlessDepth(stage) ? 3 : 0);
+      const item = document.createElement("div");
+      item.className = "battle-item" + (opt.elite ? " elite" : "");
+      item.innerHTML = `
+        <div class="bi-num">${b.icon}</div>
+        <div class="bi-main">
+          <div class="bi-name">${stage + 1}. ${b.name}${opt.elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}</div>
+          <div class="bi-desc">${weakened ? "⚔ Die Gegner sind bereits verwundet – weiter geht's!"
+            : (opt.elite ? `Gegner +${boost} Level · 1,5× Beute · <b>Relikt-Wahl!</b>` : b.desc)}</div>
+        </div>
+        <div class="bi-state">▶</div>`;
+      item.addEventListener("click", () => { Sfx.select(); openPartySelect(b, opt.elite); });
+      el.appendChild(item);
+    }
   }
+  // Endlos-Modus: Run freiwillig beenden
+  $("#btn-endquit").classList.toggle("hidden", !run.endless);
 }
 
 /* ---------- Roster-Kachel ---------- */
@@ -288,12 +359,13 @@ function renderRoster() {
 }
 
 /* ---------- Trupp-Auswahl ---------- */
-function openPartySelect(battleDef) {
+function openPartySelect(battleDef, elite = false) {
   Game.pendingBattle = battleDef;
+  Game.pendingElite = elite;
   Game.selectedParty = [];
   const run = Game.save.run;
-  const weakened = run.battleState && run.battleState.stage === battleDef.id;
-  $("#party-title").textContent = `${battleDef.icon} ${battleDef.name}`;
+  const weakened = run.battleState && run.battleState.stage === battleDef.id && !!run.battleState.elite === !!elite;
+  $("#party-title").innerHTML = `${battleDef.icon} ${battleDef.name}${elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}`;
   const info = $("#party-info");
   const update = () => {
     info.innerHTML = `Wähle bis zu <b>${battleDef.partySize}</b> Pokémon · ausgewählt: <b>${Game.selectedParty.length}</b><br>` +
@@ -876,16 +948,23 @@ function saveEnemyState(def, battle) {
     if (!u) return old ? old[i] : 0;      // war in diesem Versuch gar nicht dabei
     return u.alive ? u.hp : 0;
   });
-  run.battleState = { stage: def.id, enemies };
+  run.battleState = { stage: def.id, elite: !!Game.pendingElite, enemies };
 }
 
 async function startBattle() {
   const def = Game.pendingBattle;
+  const elite = !!Game.pendingElite;
   const party = Game.selectedParty;
   const run = Game.save.run;
   const clearedStage = run.stage;
-  const enemyState = (run.battleState && run.battleState.stage === def.id) ? run.battleState.enemies : null;
-  const { result, battle } = await BattleUI.run(def, party, enemyState, run.relics);
+  const depth = endlessDepth(clearedStage);
+  const lvlBoost = (elite ? 2 : 0) + (depth ? 3 + (depth - 1) * 2 : 0);
+  // Weg festschreiben: ab jetzt kein Wechsel mehr
+  run.played[clearedStage] = { id: def.id, elite };
+  writeSave();
+  const enemyState = (run.battleState && run.battleState.stage === def.id && !!run.battleState.elite === elite)
+    ? run.battleState.enemies : null;
+  const { result, battle } = await BattleUI.run(def, party, enemyState, run.relics, { lvlBoost });
 
   const fallen = processCasualties(battle);
   let fallenLines = fallen.map((e) =>
@@ -899,11 +978,13 @@ async function startBattle() {
 
   if (result === 1) {
     run.battleState = null;
-    let exp = STAGE_EXP[clearedStage] || 150;
+    const rewardMult = elite ? 1.5 : 1;
+    let exp = Math.round(((STAGE_EXP[Math.min(clearedStage, STAGE_EXP.length - 1)] || 150) + depth * 40) * rewardMult);
     if (hasRelic("epanhaenger")) exp = Math.round(exp * 1.2);
-    let coins = 30 + 12 * clearedStage;
+    let coins = Math.round((30 + 12 * Math.min(clearedStage, 6) + depth * 15) * rewardMult);
     if (hasRelic("gluecksmuenze")) coins = Math.round(coins * 1.4);
     run.coins += coins;
+    if (depth) Game.save.best.endless = Math.max(Game.save.best.endless || 0, depth);
     const levelups = [];
     for (const entry of run.roster) {
       awardExp(entry, party.includes(entry) ? exp : Math.round(exp / 2), levelups);
@@ -913,12 +994,13 @@ async function startBattle() {
     for (const entry of run.roster) {
       if (party.includes(entry)) healEntry(entry, Math.round(entryStats(entry).hp * healPct));
     }
-    const finale = !!def.finale;
+    const finale = !!def.finale && clearedStage === STAGE_POOLS.length - 1;
     run.stage = clearedStage + 1;
     Game.save.best.stage = Math.max(Game.save.best.stage, run.stage);
     writeSave();
 
     const lines = [
+      elite ? `<div class="res-line evo">⭐ <b>ELITE bezwungen!</b> 1,5× Beute + Relikt-Wahl</div>` : "",
       `<div class="res-line">⭐ Trupp erhält <b>${exp} EP</b>, Ersatzbank <b>${Math.round(exp / 2)} EP</b> · 🪙 <b>+${coins}</b></div>`,
       `<div class="res-line">💖 Überlebende verschnaufen (+25 % KP)</div>`,
       fallenLines,
@@ -930,21 +1012,34 @@ async function startBattle() {
     $("#result-title").className = "win";
     $("#result-body").innerHTML = lines.join("");
     Game.onResultNext = async () => {
-      if ([1, 3, 5].includes(clearedStage)) await runRelicChoice();
+      if (elite) await runRelicChoice();
       if (!finale) await runRecruitChoice(levelups);
       await runLevelUpChoices(levelups);
       if (!finale) await maybeRandomEvent();
       writeSave();
       if (finale) {
         Game.save.best.wins++;
-        Game.save.run = null;
         writeSave();
         Sfx.champion();
-        $("#result-title").textContent = "👑 CHAMPION!";
-        $("#result-title").className = "win";
-        $("#result-body").innerHTML = `<div class="res-line evo">Du hast den Run gemeistert – Champion-Sieg Nr. <b>${Game.save.best.wins}</b>!<br>Starte einen neuen Run mit anderem Starter und anderen Karten.</div>`;
-        Game.onResultNext = () => { updateTitle(); showScreen("#screen-title"); };
-        showScreen("#screen-result");
+        const i = await showChoice({
+          title: "👑 CHAMPION!",
+          sub: `Mewtu ist bezwungen – Champion-Sieg Nr. <b>${Game.save.best.wins}</b>! Wie soll es weitergehen?`,
+          cards: [
+            { icon: "🔥", title: "Endlos-Modus", desc: "Der Run geht weiter: zufällige Karten, immer stärkere Gegner. Wie tief kommst du? (Bestwert wird gespeichert)" },
+            { icon: "🏁", title: "Run glorreich beenden", desc: "Zurück zum Titel – Zeit für einen neuen Starter." },
+          ],
+        });
+        if (i === 0) {
+          run.endless = true;
+          writeSave();
+          renderBattleList();
+          showScreen("#screen-map");
+        } else {
+          Game.save.run = null;
+          writeSave();
+          updateTitle();
+          showScreen("#screen-title");
+        }
       } else {
         renderBattleList();
         showScreen("#screen-map");
@@ -982,7 +1077,7 @@ async function startBattle() {
       ${fallenLines}
       <div class="res-line">Noch <b>${left} Gegner</b> übrig – sie behalten ihre Wunden!</div>
       <div class="res-line">Dir bleiben <b>${run.roster.length} Pokémon</b>. Stell den nächsten Trupp auf!</div>`;
-    Game.onResultNext = () => { renderBattleList(); openPartySelect(def); };
+    Game.onResultNext = () => { renderBattleList(); openPartySelect(def, elite); };
     showScreen("#screen-result");
   } else {
     // Flucht
@@ -1048,6 +1143,14 @@ function init() {
     showScreen("#screen-title");
   });
   $("#btn-roster").addEventListener("click", () => { Sfx.tap(); renderRoster(); showScreen("#screen-roster"); });
+  $("#btn-endquit").addEventListener("click", () => {
+    if (!confirm("Run als Champion beenden?")) return;
+    Sfx.select();
+    Game.save.run = null;
+    writeSave();
+    updateTitle();
+    showScreen("#screen-title");
+  });
   $("#btn-roster-back").addEventListener("click", () => { Sfx.tap(); showScreen("#screen-map"); });
   $("#btn-party-back").addEventListener("click", () => { Sfx.cancel(); showScreen("#screen-map"); });
   $("#btn-party-start").addEventListener("click", () => { Sfx.select(); startBattle(); });
