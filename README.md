@@ -14,7 +14,8 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Fortschrittssystem**: EP, Level-Ups, neue Attacken, **Entwicklungen** (Glumanda → Glutexo …) und Rekruten nach jedem Sieg
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
 - **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback
-- **Gelände aus Kenneys „Isometric Landscape"-Pack** ([kenney.nl](https://kenney.nl), CC0) – inkl. eigens getönter Varianten für Spuk-Karten, Attacken-Effekte mit additivem Glow
+- **Gelände aus Kenneys „Isometric Landscape"-Pack** ([kenney.nl](https://kenney.nl), CC0) – inkl. eigens getönter Varianten für Spuk-Karten
+- **Animierte Attacken-Effekte** aus Foozles „[Pixel Magic Effects](https://foozlecc.itch.io/pixel-magic-sprite-effects)" (CC0): Feuerbälle, Wassergeysir, Erdstacheln, Portale, Tornados … kombiniert mit additivem Glow für Strahlen & Blitze
 - **Soundeffekte (WebAudio) und Vibration** – ohne Audio-Dateien
 - **Auto-Save** im Browser (localStorage)
 
@@ -56,8 +57,9 @@ js/main.js        – Kampagne, Speicherstand, Bildschirm-Flows
 ```
 assets/sprites/    – Gen-5-Sprites aus dem PokeAPI/sprites-Repository
 assets/tiles/      – Geländeblöcke aus Kenneys "Isometric Landscape" (CC0)
+assets/fx/         – Effekt-Spritesheets aus Foozles "Pixel Magic Effects" (CC0)
 ```
 
-> Hinweis: Dies ist ein nicht-kommerzielles Fanprojekt. Pokémon und alle Sprites sind © Nintendo / Game Freak / The Pokémon Company. Geländetiles von [Kenney](https://kenney.nl) (CC0).
+> Hinweis: Dies ist ein nicht-kommerzielles Fanprojekt. Pokémon und alle Sprites sind © Nintendo / Game Freak / The Pokémon Company. Geländetiles von [Kenney](https://kenney.nl) (CC0), Effekt-Animationen von [Foozle](https://foozlecc.itch.io) (CC0).
 
 Viel Spaß auf dem Schlachtfeld! 🏆

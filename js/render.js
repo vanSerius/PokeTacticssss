@@ -15,13 +15,13 @@ const MOVE_VFX = {
   hieb:         { kind: "slash" },
   tackle:       { kind: "slash" },
   ruckzuck:     { kind: "slash", color: "#fff" },
-  bodyslam:     { kind: "quake", color: "#cbd5e1" },
+  bodyslam:     { kind: "explosionfx", scale: 1.4, shake: true },
   biss:         { kind: "slash", color: "#e5e7eb" },
   karateschlag: { kind: "slash", color: "#fca5a5" },
-  geowurf:      { kind: "quake", color: "#fca5a5" },
+  geowurf:      { kind: "explosionfx", scale: 1.3, shake: true },
   schnabel:     { kind: "slash", color: "#c7d2fe" },
-  fluegelschlag:{ kind: "slash", color: "#c7d2fe" },
-  windstoss:    { kind: "beam", color: "#c7d2fe", width: 6, dur: .45 },
+  fluegelschlag:{ kind: "tornadofx", scale: 1.3 },
+  windstoss:    { kind: "windproj", scale: 1.3 },
   sternschauer: { kind: "projectile", color: "#fde047", arc: 60, size: 6 },
   heuler:       { kind: "ring", color: "#cbd5e1" },
   superschall:  { kind: "ring", color: "#e0e7ff" },
@@ -34,15 +34,15 @@ const MOVE_VFX = {
   donnerwelle:  { kind: "bolt", color: "#fef9c3" },
   funkensprung: { kind: "bolt" },
 
-  // Feuer
-  glut:         { kind: "projectile", color: "#fb923c", size: 8, arc: 30 },
-  flammenwurf:  { kind: "beam", color: "#f97316", width: 10 },
-  feuerwirbel:  { kind: "rise", color: "#fb923c", n: 18 },
+  // Feuer (Foozle-Fireball + Explosion)
+  glut:         { kind: "fireproj", scale: 1.0, impact: 1.0 },
+  flammenwurf:  { kind: "fireproj", scale: 1.45, impact: 1.5, speed: 430 },
+  feuerwirbel:  { kind: "explosionfx", scale: 1.2 },
 
-  // Wasser
-  aquaknarre:   { kind: "beam", color: "#60a5fa", width: 6, dur: .45 },
-  blubbstrahl:  { kind: "projectile", color: "#93c5fd", size: 9, arc: 26 },
-  hydropumpe:   { kind: "beam", color: "#3b82f6", width: 14, dur: .7 },
+  // Wasser (Foozle-Wassergeschoss + Geysir)
+  aquaknarre:   { kind: "waterproj", scale: 1.1 },
+  blubbstrahl:  { kind: "waterproj", scale: 1.35, speed: 300 },
+  hydropumpe:   { kind: "geyserbeam", color: "#3b82f6", width: 14, dur: .7, scale: 1.8 },
   panzerschutz: { kind: "ring", color: "#93c5fd" },
 
   // Pflanze
@@ -51,29 +51,29 @@ const MOVE_VFX = {
   megasauger:   { kind: "drainbeam", color: "#86efac" },
   schlafpuder:  { kind: "fall", shape: "drop", color: "#d8b4fe", n: 8, dur: .9 },
 
-  // Psycho
-  konfusion:    { kind: "ring" },
+  // Psycho (Foozle-Portal)
+  konfusion:    { kind: "portalfx", scale: 1.2 },
   psystrahl:    { kind: "beam+ring", color: "#f0abfc", width: 8 },
-  psychokinese: { kind: "ring", rings: 4, dur: .8 },
+  psychokinese: { kind: "portalfx", scale: 1.4 },
   psychoklinge: { kind: "beam+ring", color: "#e879f9", width: 12, dur: .7 },
   genesung:     { kind: "rise", color: "#86efac" },
   heilwoge:     { kind: "rise", color: "#86efac", n: 16 },
   barriere:     { kind: "ring", color: "#93c5fd" },
-  hypnose:      { kind: "ring", color: "#a5b4fc", rings: 4, dur: .9 },
+  hypnose:      { kind: "portalfx", scale: 1.3, dur: 1.1 },
 
-  // Geist
+  // Geist (Portal-Einschlag)
   schlecker:    { kind: "slash", color: "#c084fc" },
-  nachtnebel:   { kind: "projectile", color: "#6d28d9", size: 9, arc: 18 },
-  spukball:     { kind: "projectile+ring", color: "#a855f7", size: 10, arc: 24 },
+  nachtnebel:   { kind: "ghostball", color: "#6d28d9", size: 8, arc: 18 },
+  spukball:     { kind: "ghostball", color: "#a855f7", size: 10, arc: 24 },
 
-  // Gestein / Boden
-  steinwurf:    { kind: "projectile", color: "#a8a29e", size: 8, arc: 70 },
-  steinhagel:   { kind: "fall", shape: "rock", color: "#a8a29e", n: 5 },
+  // Gestein / Boden (Foozle-Felsen & Erdstacheln)
+  steinwurf:    { kind: "rockthrow", color: "#a8a29e", size: 8 },
+  steinhagel:   { kind: "rocksfx", scale: 1.25 },
   haertner:     { kind: "ring", color: "#d6d3d1" },
   knochenkeule: { kind: "slash", color: "#e7e5e4" },
   knochmerang:  { kind: "projectile", color: "#e7e5e4", size: 7, arc: 55 },
-  intensitaet:  { kind: "quake", color: "#d97706" },
-  schaufler:    { kind: "quake", color: "#d97706" },
+  intensitaet:  { kind: "earthspike", scale: 1.3 },
+  schaufler:    { kind: "earthspike", scale: 1.4 },
 
   // Gift
   giftstachel:  { kind: "projectile", color: "#a855f7", size: 6, arc: 30 },
@@ -105,11 +105,27 @@ function loadTileImages() {
   }
 }
 
+/* Foozle "Pixel Magic Effects" (CC0) – Spritesheets, 64×64 je Frame */
+const FX_SHEETS = {
+  earthspike: 9, explosion: 7, fireball: 10, moltenspear: 12, portal: 10,
+  rocks: 10, tornado: 9, water: 10, geyser: 13, wind: 10,
+};
+const FxImages = {};
+function loadFxSheets() {
+  for (const key of Object.keys(FX_SHEETS)) {
+    if (FxImages[key]) continue;
+    const img = new Image();
+    img.src = "assets/fx/" + key + ".png";
+    FxImages[key] = img;
+  }
+}
+
 class IsoRenderer {
   constructor(canvas) {
     this.canvas = canvas;
     this.ctx = canvas.getContext("2d");
     loadTileImages();
+    loadFxSheets();
     this.cam = { x: 0, y: 0, zoom: 1 };
     this.targetCam = null;
     this.battle = null;
@@ -530,6 +546,60 @@ class IsoRenderer {
     });
   }
 
+  /* Spritesheet-Animation auf einer Kachel (Foozle-Effekte) */
+  fxSheet(tile, name, opt = {}) {
+    const img = FxImages[name], frames = FX_SHEETS[name];
+    if (!img || !img.complete || !img.naturalWidth) {
+      return this.fxRing(tile, opt); // Fallback, falls Sheet fehlt
+    }
+    const w = this._wpt(tile);
+    const dur = opt.dur || frames * 0.075;
+    const scale = opt.scale || 1.5;
+    return this._addFx(dur, (ctx, r, k) => {
+      const idx = Math.min(frames - 1, Math.floor(k * frames));
+      const z = r.cam.zoom;
+      const s = r.worldToScreen(w.x, w.y + 18); // Bodenpunkt der Kachel
+      const size = 64 * scale * z;
+      ctx.imageSmoothingEnabled = false;
+      if (opt.center) {
+        // schwebend, mittig auf Körperhöhe (Portale)
+        const sc = r.worldToScreen(w.x, w.y);
+        ctx.drawImage(img, idx * 64, 0, 64, 64, sc.x - size / 2, sc.y - size / 2, size, size);
+      } else {
+        // am Boden verankert (Geysir, Erdstacheln, Felsen, Explosion)
+        ctx.drawImage(img, idx * 64, 0, 64, 64, s.x - size / 2, s.y + 6 * z - size, size, size);
+      }
+    }, false);
+  }
+
+  /* Spritesheet-Projektil entlang der Fluglinie (Frames zeigen nach links) */
+  fxSheetProj(from, to, name, opt = {}) {
+    const img = FxImages[name], frames = FX_SHEETS[name];
+    if (!img || !img.complete || !img.naturalWidth) {
+      return this.fxProjectile(from, to, opt);
+    }
+    const a = this._wpt(from), b = this._wpt(to);
+    const dist = Math.hypot(b.x - a.x, b.y - a.y);
+    const dur = Math.max(.3, dist / (opt.speed || 360));
+    const scale = opt.scale || 1.25;
+    const ang = Math.atan2(b.y - a.y, b.x - a.x);
+    return this._addFx(dur, (ctx, r, k) => {
+      const x = a.x + (b.x - a.x) * k;
+      const y = a.y + (b.y - a.y) * k - (opt.arc || 0) * Math.sin(k * Math.PI);
+      const s = r.worldToScreen(x, y);
+      const z = r.cam.zoom;
+      const idx = Math.floor(k * dur / 0.07) % frames;
+      const size = 64 * scale * z;
+      ctx.save();
+      ctx.translate(s.x, s.y);
+      ctx.rotate(ang);
+      ctx.scale(-1, 1); // Frames zeigen nativ nach links -> in Flugrichtung drehen
+      ctx.imageSmoothingEnabled = false;
+      ctx.drawImage(img, idx * 64, 0, 64, 64, -size / 2, -size / 2, size, size);
+      ctx.restore();
+    }, false);
+  }
+
   /* ---------- Zuordnung Attacke -> Effekt ---------- */
   async animAttackFx(moveId, fromTile, toTile, aoeTiles) {
     const m = MOVES[moveId];
@@ -538,9 +608,12 @@ class IsoRenderer {
       (m.cat === "p" ? { kind: "slash" } : m.rng > 1 ? { kind: "projectile" } : { kind: "ring" });
     const o = { color, ...spec };
     const sfxByKind = {
-      beam: "beam", "beam+ring": "beam", drainbeam: "beam",
+      beam: "beam", "beam+ring": "beam", drainbeam: "beam", geyserbeam: "beam",
       projectile: "whoosh", "projectile+ring": "whoosh", fall: "whoosh", slash: "whoosh",
-      bolt: "zap", quake: "rumble", ring: "chime", rise: "chime",
+      fireproj: "whoosh", waterproj: "whoosh", windproj: "whoosh", tornadofx: "whoosh",
+      ghostball: "whoosh", rockthrow: "whoosh",
+      bolt: "zap", quake: "rumble", explosionfx: "rumble", earthspike: "rumble", rocksfx: "rumble",
+      ring: "chime", rise: "chime", portalfx: "chime",
     };
     const sfx = sfxByKind[spec.kind];
     if (sfx && typeof Sfx !== "undefined" && Sfx[sfx]) Sfx[sfx]();
@@ -583,6 +656,51 @@ class IsoRenderer {
       case "beam+ring":
         jobs.push(this.fxBeam(fromTile, toTile, o));
         for (const t of aoeTiles) jobs.push(this.wait(280).then(() => this.fxRing(t, o)));
+        break;
+
+      /* ---- Foozle-Spritesheet-Effekte ---- */
+      case "fireproj":
+        jobs.push(this.fxSheetProj(fromTile, toTile, "fireball", o)
+          .then(() => this.fxSheet(toTile, "explosion", { scale: o.impact || 1.2 })));
+        break;
+      case "waterproj":
+        jobs.push(this.fxSheetProj(fromTile, toTile, "water", o));
+        break;
+      case "geyserbeam":
+        jobs.push(this.fxBeam(fromTile, toTile, o));
+        jobs.push(this.wait(220).then(() => this.fxSheet(toTile, "geyser", { scale: o.scale || 1.7 })));
+        break;
+      case "explosionfx":
+        if (spec.shake) this.shake(7);
+        aoeTiles.forEach((t, i) => jobs.push(this.wait(i * 60).then(() => this.fxSheet(t, "explosion", o))));
+        break;
+      case "earthspike":
+        this.shake(7);
+        aoeTiles.forEach((t, i) => jobs.push(this.wait(i * 60).then(() => this.fxSheet(t, "earthspike", o))));
+        break;
+      case "rocksfx":
+        aoeTiles.forEach((t, i) => jobs.push(this.wait(i * 70).then(() => this.fxSheet(t, "rocks", o))));
+        break;
+      case "rockthrow":
+        jobs.push(this.fxProjectile(fromTile, toTile, { ...o, arc: 70 })
+          .then(() => this.fxSheet(toTile, "rocks", { scale: 1.3 })));
+        break;
+      case "portalfx":
+        aoeTiles.forEach((t, i) => jobs.push(this.wait(i * 50).then(() =>
+          this.fxSheet(t, "portal", { ...o, center: true }))));
+        break;
+      case "ghostball":
+        jobs.push(this.fxProjectile(fromTile, toTile, o)
+          .then(() => this.fxSheet(toTile, "portal", { center: true, scale: 1.4 })));
+        break;
+      case "windproj":
+        jobs.push(this.fxSheetProj(fromTile, toTile, "wind", { speed: 460, ...o }));
+        break;
+      case "tornadofx":
+        for (const t of aoeTiles) jobs.push(this.fxSheet(t, "tornado", o));
+        break;
+      case "spear":
+        aoeTiles.forEach((t, i) => jobs.push(this.wait(i * 60).then(() => this.fxSheet(t, "moltenspear", o))));
         break;
     }
     await Promise.all(jobs);
