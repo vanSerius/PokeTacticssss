@@ -13,10 +13,14 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
   const moves = (entry && entry.moves && entry.moves.length)
     ? entry.moves.slice(0, 4)
     : sp.learn.filter(([l]) => l <= lvl).map(([, id]) => id).slice(-4);
+  const maxHp = st(0) + bonus.hp;
+  // KP bleibt innerhalb eines Runs erhalten
+  const startHp = (entry && entry.hp !== undefined)
+    ? Math.max(1, Math.min(entry.hp, maxHp)) : maxHp;
   return {
     species: spId, name: sp.name, role: sp.role, types: sp.types,
     lvl, team, boss: boss || !!sp.boss,
-    maxHp: st(0) + bonus.hp, hp: st(0) + bonus.hp,
+    maxHp, hp: startHp,
     atk: st(1) + bonus.atk, def: st(2) + bonus.def, spd: sp.base[3] + bonus.spd,
     mov: sp.mov + (bonus.mov || 0), jmp: sp.jmp, fly: !!sp.fly, swim: !!sp.swim,
     x, y, rx: x, ry: y, hop: 0, facing: { x: 0, y: 1 },
@@ -28,7 +32,8 @@ function makeUnit(spId, lvl, team, x, y, boss = false, entry = null) {
 }
 
 class Battle {
-  constructor(def, partyEntries) {
+  /* enemyState: KP-Reste aus vorherigem Versuch (Index = Gegner-Index, 0 = tot) */
+  constructor(def, partyEntries, enemyState = null) {
     this.def = def;
     this.h = def.heights.length;
     this.w = def.heights[0].length;
@@ -41,9 +46,14 @@ class Battle {
       u.rosterRef = e;
       this.units.push(u);
     });
-    for (const e of def.enemies) {
-      this.units.push(makeUnit(e.sp, e.lvl, 1, e.x, e.y, e.boss));
-    }
+    def.enemies.forEach((e, i) => {
+      const hpLeft = enemyState ? enemyState[i] : undefined;
+      if (hpLeft !== undefined && hpLeft !== null && hpLeft <= 0) return; // bereits besiegt
+      const u = makeUnit(e.sp, e.lvl, 1, e.x, e.y, e.boss);
+      if (hpLeft !== undefined && hpLeft !== null) u.hp = Math.min(u.hp, hpLeft);
+      u.enemyIdx = i;
+      this.units.push(u);
+    });
     this.active = null;
     this.round = 0;
     // Anfangs-Blickrichtung: zum nächsten Feind

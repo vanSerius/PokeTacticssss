@@ -523,8 +523,8 @@ const BattleUI = (() => {
   }
 
   /* ---------- Hauptschleife ---------- */
-  async function run(def, partyEntries) {
-    battle = new Battle(def, partyEntries);
+  async function run(def, partyEntries, enemyState = null) {
+    battle = new Battle(def, partyEntries, enemyState);
     showScreen("#screen-battle");
     renderer.resize();          // Canvas war evtl. unsichtbar (Größe 0)
     renderer.setBattle(battle);
@@ -593,9 +593,9 @@ const BattleUI = (() => {
     hideActionBar();
     clearMarks();
     if (result === 1) { Sfx.win(); await banner("🏆 SIEG!", 1600); }
-    else if (result === 2) { Sfx.lose(); await banner("💀 Niederlage …", 1600); }
+    else if (result === 2) { Sfx.lose(); await banner("💀 Der Trupp ist gefallen …", 1600); }
     renderer.onTap = null;
-    return result; // 1 Sieg, 2 Niederlage, 3 geflohen
+    return { result, battle }; // 1 Sieg, 2 Niederlage, 3 geflohen
   }
 
   return { init, run };

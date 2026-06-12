@@ -10,7 +10,9 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Klassisches Typensystem**: Wasser löscht Feuer, Elektro schockt Flieger, Geister sind immun gegen normale Hiebe
 - **Flanken- & Rückenangriffe** (+10 % / +25 % Schaden), Flächenattacken mit Friendly Fire
 - **Status-Effekte**: Brand, Gift, Paralyse, Schlaf – plus Buffs & Debuffs
-- **Roguelike-Runs**: Starter-Wahl (1 aus 3), nach jedem Sieg Rekruten-Wahl (1 aus 2 oder ablehnen für EP), bei jedem Level-Up 1 aus 3 Verbesserungs-Karten (neue Attacke, +KP/ANG/VER/Tempo/Bewegung) – **Niederlage beendet den Run**, der beste Run wird gespeichert
+- **Roguelike-Runs**: Starter-Wahl (1 aus 3), nach jedem Sieg Rekruten-Wahl (1 aus 2 oder ablehnen für EP), bei jedem Level-Up 1 aus 3 Verbesserungs-Karten (neue Attacke, +KP/ANG/VER/Tempo/Bewegung)
+- **Permadeath & Rückschläge**: Wer im Kampf fällt, ist tot (Pokécenter/Beleber können wiederbeleben). KP bleiben zwischen Kämpfen erhalten. Wird der Trupp besiegt, tritt der nächste gegen die **verwundeten Gegner** an – der Run endet erst, wenn niemand mehr lebt
+- **Zufallsbegegnungen** alle 2–3 Etappen: Pokécenter (heilen oder wiederbeleben), Wanderhändler mit Münz-Shop (Tränke, Beleber, Protein, Sonderbonbon …), Rast am Lagerfeuer
 - **7 Etappen pro Run** inkl. Bosskämpfen (Onix, Rivalen-Team, Mewtu als Finale), **Entwicklungen** (Glumanda → Glutexo …) bleiben erhalten
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
 - **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback
