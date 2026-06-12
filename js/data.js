@@ -983,6 +983,8 @@ function manaCost(m) {
 }
 
 /* ---------- Roguelike-Run-Konstanten ---------- */
+/* Ab diesem Level wird die Entwicklung angeboten (Reset auf Lv.1!) */
+const EVO_LEVEL = 5;
 /* Pool für Starter, Gefährten und Rekruten */
 const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein"];
 const RECRUIT_POOL = [...PLAYER_POOL, "relaxo"];

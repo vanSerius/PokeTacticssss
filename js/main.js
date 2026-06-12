@@ -367,50 +367,160 @@ async function runLevelUpChoices(levelups) {
     picks[i].apply();
     writeSave();
   }
-  // Entwicklungen prüfen
+  // Entwicklung anbieten (ab Lv.5): Reset auf Lv.1, höhere Basiswerte
   for (const entry of [...new Set(levelups)]) {
     if (!Game.save.run.roster.includes(entry)) continue;
-    let sp = SPECIES[entry.sp];
-    while (sp.evoLvl && entry.lvl >= sp.evoLvl && sp.evoTo) {
-      const oldName = sp.name;
-      const beforeHp = entryStats(entry).hp;
-      entry.sp = sp.evoTo;
-      sp = SPECIES[entry.sp];
-      healEntry(entry, entryStats(entry).hp - beforeHp);
-      Sfx.levelup();
-      await showChoice({
-        title: "✨ Entwicklung!",
-        sub: "",
-        cards: [{
+    const sp = SPECIES[entry.sp];
+    if (!sp.evoTo || entry.lvl < EVO_LEVEL) continue;
+    const evo = SPECIES[sp.evoTo];
+    const i = await showChoice({
+      title: `✨ ${sp.name} will sich entwickeln!`,
+      sub: `Entwicklung setzt auf <b>Level 1</b> zurück – dafür deutlich höhere Basiswerte, neues Basis-Moveset und schnellere Level-Ups. Karten-Boni bleiben erhalten.`,
+      cards: [
+        {
+          speciesId: sp.evoTo,
+          title: `Ja! Zu ${evo.name} entwickeln`,
+          desc: `${evo.role} · KP-Basis ${evo.base[0]} (statt ${sp.base[0]}) · ANG-Basis ${evo.base[1]} (statt ${sp.base[1]})<br>Startet auf Lv.1 mit ${defaultMoves(sp.evoTo, 1).map((id) => MOVES[id].name).join(" · ")}`,
+          chips: evo.types.map(typeChipHtml).join(""),
+        },
+        {
           speciesId: entry.sp,
-          title: `${oldName} entwickelt sich zu ${sp.name}!`,
-          desc: `${sp.role} · die Attacken bleiben erhalten`,
+          title: `Nein, ${sp.name} bleiben`,
+          desc: `Bleibt auf Lv.${entry.lvl} – die Frage kommt beim nächsten Level-Up erneut.`,
           chips: sp.types.map(typeChipHtml).join(""),
-        }],
-      });
+        },
+      ],
+    });
+    if (i === 0) {
+      await playEvolutionAnim(entry.sp, sp.evoTo);
+      entry.sp = sp.evoTo;
+      entry.lvl = 1;
+      entry.exp = 0;
+      entry.moves = defaultMoves(entry.sp, 1);
+      entry.hp = entryStats(entry).hp; // frisch entwickelt = topfit
       writeSave();
+      await showChoice({
+        title: "🎉 Glückwunsch!",
+        sub: "",
+        cards: [pokemonCard(entry)],
+      });
     }
   }
+}
+
+/* ---------- Entwicklungs-Animation (klassisch: Pulsieren -> Blitz -> Reveal) ---------- */
+function playEvolutionAnim(fromSp, toSp) {
+  return new Promise((resolve) => {
+    const overlay = $("#evo-overlay");
+    const cv = $("#evo-canvas");
+    const ctx = cv.getContext("2d");
+    const W = cv.width, H = cv.height;
+    overlay.classList.remove("hidden");
+    $("#evo-text").textContent = `${SPECIES[fromSp].name} entwickelt sich …`;
+    Sfx.evolve();
+
+    /* Weiße Silhouette eines Sprites vorbereiten */
+    function silhouette(spId) {
+      const c = document.createElement("canvas");
+      c.width = W; c.height = H;
+      const cc = c.getContext("2d");
+      SpriteCache.draw(cc, spId, W * .15, H * .15, W * .7, H * .7);
+      cc.globalCompositeOperation = "source-in";
+      cc.fillStyle = "#ffffff";
+      cc.fillRect(0, 0, W, H);
+      return c;
+    }
+    const silFrom = silhouette(fromSp);
+    const silTo = silhouette(toSp);
+
+    let t = 0, last = performance.now(), done = false, sparks = [];
+    function finish() {
+      if (done) return;
+      done = true;
+      overlay.classList.add("hidden");
+      overlay.onclick = null;
+      resolve();
+    }
+    overlay.onclick = () => { Sfx.tap(); finish(); };
+
+    function frame(now) {
+      if (done) return;
+      const dt = Math.min(.05, (now - last) / 1000);
+      last = now;
+      t += dt;
+      ctx.clearRect(0, 0, W, H);
+      // Glühen im Hintergrund
+      const glow = ctx.createRadialGradient(W / 2, H / 2, 10, W / 2, H / 2, W * .55);
+      const gi = Math.min(1, t / 2.5);
+      glow.addColorStop(0, `rgba(255,255,255,${(0.12 + gi * .25).toFixed(2)})`);
+      glow.addColorStop(1, "rgba(255,255,255,0)");
+      ctx.fillStyle = glow;
+      ctx.fillRect(0, 0, W, H);
+
+      if (t < 1.1) {
+        // Phase 1: Original pulsiert weiß
+        SpriteCache.draw(ctx, fromSp, W * .15, H * .15, W * .7, H * .7);
+        ctx.globalAlpha = .5 + .5 * Math.sin(t * 8);
+        ctx.drawImage(silFrom, 0, 0);
+        ctx.globalAlpha = 1;
+      } else if (t < 3.0) {
+        // Phase 2: Silhouetten wechseln immer schneller
+        const k = (t - 1.1) / 1.9;
+        const freq = 3 + k * 14;
+        const which = Math.floor(t * freq) % 2 === 0 ? silFrom : silTo;
+        const scale = 1 + Math.sin(t * freq * Math.PI) * .04;
+        ctx.save();
+        ctx.translate(W / 2, H / 2);
+        ctx.scale(scale, scale);
+        ctx.drawImage(which, -W / 2, -H / 2);
+        ctx.restore();
+      } else if (t < 3.35) {
+        // Phase 3: Blitz!
+        if (!sparks.length) {
+          $("#evo-text").textContent = "✨";
+          for (let i = 0; i < 40; i++) {
+            const a = Math.random() * Math.PI * 2, sp = 60 + Math.random() * 160;
+            sparks.push({ x: W / 2, y: H / 2, vx: Math.cos(a) * sp, vy: Math.sin(a) * sp, life: .9 + Math.random() * .6, t: 0 });
+          }
+        }
+        ctx.fillStyle = "#ffffff";
+        ctx.fillRect(0, 0, W, H);
+      } else {
+        // Phase 4: Enthüllung + Funken
+        if (t < 3.45) Sfx.levelup();
+        $("#evo-text").textContent = `🎉 ${SPECIES[toSp].name}!`;
+        SpriteCache.draw(ctx, toSp, W * .15, H * .15, W * .7, H * .7);
+        ctx.save();
+        ctx.globalCompositeOperation = "lighter";
+        for (const s of sparks) {
+          s.t += dt;
+          s.x += s.vx * dt; s.y += s.vy * dt;
+          s.vy += 30 * dt;
+          if (s.t < s.life) {
+            ctx.globalAlpha = Math.max(0, 1 - s.t / s.life);
+            ctx.fillStyle = Math.random() < .5 ? "#ffd84d" : "#ffffff";
+            ctx.beginPath();
+            ctx.arc(s.x, s.y, 3, 0, Math.PI * 2);
+            ctx.fill();
+          }
+        }
+        ctx.restore();
+        if (t > 5.2) { finish(); return; }
+      }
+      requestAnimationFrame(frame);
+    }
+    requestAnimationFrame(frame);
+  });
 }
 
 /* ---------- Rekruten-Angebot ---------- */
 async function runRecruitChoice(levelups) {
   const run = Game.save.run;
-  const lvl = Math.max(3, avgRosterLvl());
+  const lvl = Math.max(3, 3 + run.stage - 1);
   const inTeam = new Set(run.roster.map((e) => e.sp));
   let pool = RECRUIT_POOL.filter((s) => !inTeam.has(s));
   if (pool.length < 2) pool = RECRUIT_POOL;
-  const offers = sample(pool, 2).map((s) => {
-    const e = mkEntry(s, lvl);
-    let sp = SPECIES[e.sp];
-    while (sp.evoLvl && e.lvl >= sp.evoLvl && sp.evoTo) {
-      e.sp = sp.evoTo;
-      sp = SPECIES[e.sp];
-      e.moves = defaultMoves(e.sp, e.lvl);
-    }
-    e.hp = entryStats(e).hp;
-    return e;
-  });
+  const offers = sample(pool, 2).map((s) => mkEntry(s, lvl));
   const i = await showChoice({
     title: "🤝 Ein Rekrut möchte beitreten!",
     sub: "Wähle einen Neuzugang – oder lehne ab und dein Team erhält je 25 EP.",

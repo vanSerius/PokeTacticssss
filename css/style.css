@@ -354,6 +354,17 @@ html, body {
 .im-moves { margin-top: 8px; display: flex; flex-direction: column; gap: 6px; }
 .im-move { background: var(--bg2); border-radius: 10px; padding: 7px 10px; font-size: .82rem; }
 
+/* ---------- Entwicklungs-Animation ---------- */
+#evo-overlay {
+  position: fixed; inset: 0; z-index: 60;
+  background: radial-gradient(80% 60% at 50% 45%, #2a2f55 0%, #0c0e1a 75%);
+  display: flex; flex-direction: column; align-items: center; justify-content: center;
+  gap: 18px;
+}
+#evo-canvas { width: min(320px, 80vw); height: min(320px, 80vw); image-rendering: pixelated; }
+#evo-text { font-size: 1.15rem; font-weight: 900; text-align: center; padding: 0 24px; }
+.evo-skip { color: var(--ink-dim); font-size: .75rem; opacity: .7; }
+
 /* ---------- Ergebnis ---------- */
 .result-center { justify-content: center; align-items: center; text-align: center; gap: 16px; }
 #result-title { font-size: 2.2rem; font-weight: 900; }

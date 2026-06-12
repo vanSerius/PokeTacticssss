@@ -71,5 +71,10 @@ const Sfx = (() => {
     win()    { [523, 659, 784, 1047].forEach((f, i) => tone(f, .18, "square", .07, 0, i * .14)); },
     lose()   { [392, 330, 262, 196].forEach((f, i) => tone(f, .22, "triangle", .07, 0, i * .18)); },
     levelup(){ [659, 784, 988, 1319].forEach((f, i) => tone(f, .12, "square", .06, 0, i * .1)); },
+    evolve() {
+      // aufsteigendes Schimmern während der Verwandlung
+      for (let i = 0; i < 10; i++) tone(330 + i * 70, .22, "sine", .04, 60, i * .28);
+      tone(140, 2.8, "sine", .03, 120);
+    },
   };
 })();
