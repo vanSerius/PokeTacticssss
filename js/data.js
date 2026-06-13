@@ -7,33 +7,39 @@
 /* ---------- Typen ---------- */
 const TYPES = {
   normal:   { name: "Normal",   color: "#9ca3af" },
-  fire:     { name: "Feuer",    color: "#f97316" },
+  fire:     { name: "Feuer",    color: "#f97316", ice: 2, bug: 2 },
   water:    { name: "Wasser",   color: "#3b82f6" },
   grass:    { name: "Pflanze",  color: "#22c55e" },
   electric: { name: "Elektro",  color: "#eab308" },
   psychic:  { name: "Psycho",   color: "#ec4899" },
-  fighting: { name: "Kampf",    color: "#b91c1c" },
-  rock:     { name: "Gestein",  color: "#a16207" },
+  fighting: { name: "Kampf",    color: "#b91c1c", ice: 2 },
+  rock:     { name: "Gestein",  color: "#a16207", ice: 2, bug: 2 },
   ground:   { name: "Boden",    color: "#d97706" },
-  flying:   { name: "Flug",     color: "#818cf8" },
+  flying:   { name: "Flug",     color: "#818cf8", bug: 2 },
   poison:   { name: "Gift",     color: "#a855f7" },
   ghost:    { name: "Geist",    color: "#6d28d9" },
+  ice:      { name: "Eis",      color: "#7dd3fc",  },
+  bug:      { name: "Käfer",    color: "#84cc16" },
+  dragon:   { name: "Drache",   color: "#6366f1" },
 };
 
 /* Angriffstyp -> { Verteidigertyp: Multiplikator }, fehlend = 1 */
 const TYPE_CHART = {
   normal:   { rock: .5, ghost: 0 },
-  fire:     { grass: 2, water: .5, fire: .5, rock: .5 },
+  fire:     { grass: 2, ice: 2, bug: 2, water: .5, fire: .5, rock: .5 },
   water:    { fire: 2, rock: 2, ground: 2, water: .5, grass: .5 },
   grass:    { water: 2, rock: 2, ground: 2, fire: .5, grass: .5, flying: .5, poison: .5 },
   electric: { water: 2, flying: 2, grass: .5, electric: .5, ground: 0 },
   psychic:  { fighting: 2, poison: 2, psychic: .5 },
-  fighting: { normal: 2, rock: 2, flying: .5, psychic: .5, poison: .5, ghost: 0 },
-  rock:     { fire: 2, flying: 2, fighting: .5, ground: .5 },
+  fighting: { normal: 2, rock: 2, ice: 2, flying: .5, psychic: .5, poison: .5, ghost: 0 },
+  rock:     { fire: 2, flying: 2, ice: 2, bug: 2, fighting: .5, ground: .5 },
   ground:   { fire: 2, electric: 2, rock: 2, poison: 2, grass: .5, flying: 0 },
-  flying:   { grass: 2, fighting: 2, electric: .5, rock: .5 },
+  flying:   { grass: 2, fighting: 2, bug: 2, electric: .5, rock: .5 },
   poison:   { grass: 2, poison: .5, ground: .5, rock: .5, ghost: .5 },
   ghost:    { ghost: 2, psychic: 2, normal: 0 },
+  ice:      { grass: 2, ground: 2, flying: 2, dragon: 2, water: .5, fire: .5, ice: .5 },
+  bug:      { grass: 2, psychic: 2, fire: .5, fighting: .5, flying: .5, poison: .5, ghost: .5 },
+  dragon:   { dragon: 2 },
 };
 
 function typeMult(atkType, defTypes) {
@@ -121,6 +127,22 @@ const MOVES = {
   superschall: { name: "Superschall", type: "flying",  cat: "s", pow: 0,  rng: 3, aoe: 0, acc: 75, pp: 8, buff: { stat: "atk", mult: .65, dur: 3 }, target: "foe", desc: "Schrille Wellen schwächen den Angriff." },
 
   heilwoge:    { name: "Heilwoge",    type: "psychic", cat: "s", pow: 0,  rng: 3, aoe: 0, acc: 100, pp: 8, heal: .45, target: "ally", desc: "Heilt einen Verbündeten (45 % max. KP)." },
+
+  // Eis
+  eishieb:     { name: "Eishieb",     type: "ice",     cat: "p", pow: 55, rng: 1, aoe: 0, acc: 95, pp: 12, knock: 1, buff: { stat: "spd", mult: .8, dur: 2 }, target: "foe", desc: "Eiskalter Hieb, verlangsamt das Ziel." },
+  eisstrahl:   { name: "Eisstrahl",   type: "ice",     cat: "m", pow: 75, rng: 3, aoe: 0, acc: 95, pp: 8, buff: { stat: "spd", mult: .7, dur: 2 }, target: "foe", desc: "Kalter Strahl, der das Ziel einfriert (langsamer)." },
+  schneesturm: { name: "Schneesturm", type: "ice",     cat: "m", pow: 60, rng: 3, aoe: 1, acc: 85, pp: 5, target: "foe", desc: "Eisige Böen im Kreuzbereich." },
+  aurorastrahl:{ name: "Aurorastrahl",type: "ice",     cat: "m", pow: 55, rng: 3, aoe: 0, acc: 100, pp: 10, target: "foe", desc: "Schimmernder Eisstrahl." },
+
+  // Käfer
+  käfersäbel:  { name: "Käfersäbel",  type: "bug",     cat: "p", pow: 55, rng: 1, aoe: 0, acc: 95, pp: 15, crit: 12, target: "foe", desc: "Schnelle Klingenhiebe, oft Volltreffer." },
+  käferbiss:   { name: "Käferbiss",   type: "bug",     cat: "p", pow: 50, rng: 1, aoe: 0, acc: 100, pp: 12, drain: .5, target: "foe", desc: "Saugt mit den Mandibeln KP ab." },
+  zornklinge:  { name: "Zornklinge",  type: "bug",     cat: "p", pow: 70, rng: 2, aoe: 0, acc: 90, pp: 8, target: "foe", desc: "Sichelhieb über zwei Felder." },
+
+  // Drache
+  drachenklaue:{ name: "Drachenklaue",type: "dragon",  cat: "p", pow: 65, rng: 1, aoe: 0, acc: 100, pp: 10, target: "foe", desc: "Reißt mit gewaltigen Klauen." },
+  drachenwut:  { name: "Drachenwut",  type: "dragon",  cat: "m", pow: 65, rng: 3, aoe: 0, acc: 100, pp: 8, target: "foe", desc: "Eine Druckwelle aus reiner Drachenkraft." },
+  wutanfall:   { name: "Wutanfall",   type: "dragon",  cat: "p", pow: 90, rng: 1, aoe: 0, acc: 90, pp: 5, knock: 2, target: "foe", desc: "Tobender Angriff mit voller Wucht." },
   platscher:   { name: "Platscher",   type: "normal",  cat: "p", pow: 12, rng: 1, aoe: 0, acc: 100, pp: Infinity, target: "foe", desc: "Platsch, platsch … fast völlig wirkungslos. Karpador eben." },
   psychoklinge:{ name: "Psychoklinge",type: "psychic", cat: "m", pow: 72, rng: 4, aoe: 1, acc: 95, pp: 6, target: "foe", desc: "Mewtus verheerende Psycho-Klinge." },
 };
@@ -357,6 +379,210 @@ const SPECIES = {
     dex: 130, name: "Garados", role: "Schreckensdrache", types: ["water","flying"], sprite: "rettan",
     base: [62, 26, 17, 11], grow: [4.8, 2.3, 1.6, 0], mov: 4, jmp: 2, swim: true,
     learn: [[1,"biss"],[1,"aquaknarre"],[1,"hydropumpe"],[1,"intensitaet"]],
+  },
+
+  /* === Welle 3: viele neue Gefährten (Eis/Käfer/Drache & mehr) === */
+  vulpix: {
+    dex: 37, name: "Vulpix", role: "Fuchsglut", types: ["fire"], sprite: "glumanda",
+    base: [36, 15, 13, 11], grow: [3.6, 1.7, 1.4, 0], mov: 4, jmp: 2,
+    learn: [[1,"glut"],[1,"ruckzuck"],[5,"feuerwirbel"],[9,"flammenwurf"]],
+    evoLvl: 9, evoTo: "vulnona",
+  },
+  vulnona: {
+    dex: 38, name: "Vulnona", role: "Neunschweif", types: ["fire"], sprite: "glumanda",
+    base: [52, 22, 18, 13], grow: [4.1, 2.0, 1.6, 0], mov: 4, jmp: 2,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"sternschauer"]],
+  },
+  enton: {
+    dex: 54, name: "Enton", role: "Migräne-Ente", types: ["water"], sprite: "schiggy",
+    base: [40, 15, 13, 10], grow: [3.8, 1.7, 1.4, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"aquaknarre"],[1,"tackle"],[6,"konfusion"]],
+    evoLvl: 10, evoTo: "entoron",
+  },
+  entoron: {
+    dex: 55, name: "Entoron", role: "Sturzbach", types: ["water","psychic"], sprite: "schiggy",
+    base: [56, 23, 18, 12], grow: [4.3, 2.0, 1.6, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"hydropumpe"],[1,"psystrahl"],[1,"aquaknarre"]],
+  },
+  quapsel: {
+    dex: 60, name: "Quapsel", role: "Kaulquappe", types: ["water"], sprite: "schiggy",
+    base: [38, 15, 12, 10], grow: [3.6, 1.7, 1.3, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"aquaknarre"],[1,"tackle"],[6,"karateschlag"]],
+    evoLvl: 8, evoTo: "quaputzi",
+  },
+  quaputzi: {
+    dex: 61, name: "Quaputzi", role: "Strudler", types: ["water"], sprite: "schiggy",
+    base: [50, 20, 16, 11], grow: [4.0, 1.9, 1.5, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"aquaknarre"],[1,"karateschlag"],[10,"hydropumpe"]],
+    evoLvl: 12, evoTo: "quappo",
+  },
+  quappo: {
+    dex: 62, name: "Quappo", role: "Faustkämpfer", types: ["water","fighting"], sprite: "machollo",
+    base: [64, 26, 19, 11], grow: [4.6, 2.2, 1.7, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"hydropumpe"],[1,"geowurf"],[1,"karateschlag"],[1,"bodyslam"]],
+  },
+  ponita: {
+    dex: 77, name: "Ponita", role: "Feuerfohlen", types: ["fire"], sprite: "glumanda",
+    base: [40, 17, 13, 13], grow: [3.8, 1.9, 1.4, 0], mov: 5, jmp: 3,
+    learn: [[1,"glut"],[1,"ruckzuck"],[7,"feuerwirbel"]],
+    evoLvl: 10, evoTo: "gallopa",
+  },
+  gallopa: {
+    dex: 78, name: "Gallopa", role: "Flammenross", types: ["fire"], sprite: "glumanda",
+    base: [56, 24, 17, 15], grow: [4.3, 2.1, 1.6, 0], mov: 5, jmp: 3,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"ruckzuck"]],
+  },
+  flegmon: {
+    dex: 79, name: "Flegmon", role: "Tagträumer", types: ["water","psychic"], sprite: "relaxo",
+    base: [52, 15, 15, 5], grow: [4.6, 1.6, 1.6, 0], mov: 3, jmp: 1, swim: true,
+    learn: [[1,"aquaknarre"],[1,"konfusion"],[1,"genesung"]],
+    evoLvl: 12, evoTo: "lahmus",
+  },
+  lahmus: {
+    dex: 80, name: "Lahmus", role: "Muschelweiser", types: ["water","psychic"], sprite: "relaxo",
+    base: [68, 22, 24, 6], grow: [5.0, 1.9, 2.1, 0], mov: 3, jmp: 1, swim: true,
+    learn: [[1,"hydropumpe"],[1,"psychokinese"],[1,"genesung"],[1,"panzerschutz"]],
+  },
+  krabby: {
+    dex: 98, name: "Krabby", role: "Zangentier", types: ["water"], sprite: "kleinstein",
+    base: [36, 17, 16, 9], grow: [3.5, 1.9, 1.7, 0], mov: 3, jmp: 1, swim: true,
+    learn: [[1,"aquaknarre"],[1,"steinwurf"],[1,"karateschlag"]],
+    evoLvl: 10, evoTo: "kingler",
+  },
+  kingler: {
+    dex: 99, name: "Kingler", role: "Scherenmeister", types: ["water"], sprite: "kleinstein",
+    base: [54, 26, 22, 10], grow: [4.2, 2.3, 2.0, 0], mov: 3, jmp: 1, swim: true,
+    learn: [[1,"hydropumpe"],[1,"steinhagel"],[1,"geowurf"]],
+  },
+  owei: {
+    dex: 102, name: "Owei", role: "Eierbund", types: ["grass","psychic"], sprite: "bisasam",
+    base: [44, 14, 14, 8], grow: [3.8, 1.6, 1.5, 0], mov: 3, jmp: 2,
+    learn: [[1,"rankenhieb"],[1,"konfusion"],[6,"schlafpuder"]],
+    evoLvl: 12, evoTo: "kokowei",
+  },
+  kokowei: {
+    dex: 103, name: "Kokowei", role: "Palmwächter", types: ["grass","psychic"], sprite: "bisasam",
+    base: [62, 24, 18, 9], grow: [4.5, 2.2, 1.7, 0], mov: 3, jmp: 2,
+    learn: [[1,"rasierblatt"],[1,"psychokinese"],[1,"megasauger"]],
+  },
+  mauzi: {
+    dex: 52, name: "Mauzi", role: "Katzendieb", types: ["normal"], sprite: "rattfratz",
+    base: [36, 15, 11, 12], grow: [3.4, 1.6, 1.2, 0], mov: 4, jmp: 2,
+    learn: [[1,"ruckzuck"],[1,"biss"],[6,"sternschauer"]],
+    evoLvl: 10, evoTo: "snobilikat",
+  },
+  snobilikat: {
+    dex: 53, name: "Snobilikat", role: "Edelkatze", types: ["normal"], sprite: "rattfratz",
+    base: [52, 22, 16, 14], grow: [4.0, 2.0, 1.5, 0], mov: 5, jmp: 2,
+    learn: [[1,"biss"],[1,"sternschauer"],[1,"bodyslam"]],
+  },
+  digda: {
+    dex: 50, name: "Digda", role: "Maulwurf", types: ["ground"], sprite: "sandan",
+    base: [30, 16, 9, 12], grow: [3.0, 1.8, 1.1, 0], mov: 4, jmp: 2,
+    learn: [[1,"schaufler"],[1,"tackle"],[7,"intensitaet"]],
+    evoLvl: 10, evoTo: "digdri",
+  },
+  digdri: {
+    dex: 51, name: "Digdri", role: "Dreikopf-Gräber", types: ["ground"], sprite: "sandan",
+    base: [44, 24, 14, 15], grow: [3.6, 2.2, 1.3, 0], mov: 5, jmp: 2,
+    learn: [[1,"schaufler"],[1,"intensitaet"],[1,"steinhagel"]],
+  },
+  sichlor: {
+    dex: 123, name: "Sichlor", role: "Sensenmeister", types: ["bug","flying"], sprite: "taubsi",
+    base: [58, 26, 16, 14], grow: [4.4, 2.3, 1.5, 0], mov: 5, jmp: 4, fly: true,
+    learn: [[1,"käfersäbel"],[1,"zornklinge"],[1,"fluegelschlag"],[1,"ruckzuck"]],
+  },
+  pinsir: {
+    dex: 127, name: "Pinsir", role: "Zangenkäfer", types: ["bug"], sprite: "machollo",
+    base: [60, 27, 20, 11], grow: [4.5, 2.4, 1.8, 0], mov: 4, jmp: 2,
+    learn: [[1,"zornklinge"],[1,"käfersäbel"],[1,"geowurf"],[1,"steinwurf"]],
+  },
+  dratini: {
+    dex: 147, name: "Dratini", role: "Mini-Drache", types: ["dragon"], sprite: "rettan",
+    base: [40, 17, 12, 10], grow: [3.9, 1.9, 1.3, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"drachenwut"],[1,"tackle"],[8,"aquaknarre"]],
+    evoLvl: 10, evoTo: "dragonir",
+  },
+  dragonir: {
+    dex: 148, name: "Dragonir", role: "Sturmdrache", types: ["dragon"], sprite: "rettan",
+    base: [56, 23, 17, 12], grow: [4.5, 2.2, 1.6, 0], mov: 4, jmp: 3, swim: true,
+    learn: [[1,"drachenklaue"],[1,"drachenwut"],[1,"eisstrahl"]],
+    evoLvl: 16, evoTo: "dragoran",
+  },
+  dragoran: {
+    dex: 149, name: "Dragoran", role: "Friedensdrache", types: ["dragon","flying"], sprite: "relaxo",
+    base: [74, 29, 20, 12], grow: [5.0, 2.5, 1.8, 0], mov: 4, jmp: 4, fly: true,
+    learn: [[1,"wutanfall"],[1,"drachenklaue"],[1,"flammenwurf"],[1,"fluegelschlag"]],
+  },
+  elektek: {
+    dex: 125, name: "Elektek", role: "Stromfaust", types: ["electric"], sprite: "machollo",
+    base: [56, 24, 16, 15], grow: [4.3, 2.2, 1.5, 0], mov: 4, jmp: 2,
+    learn: [[1,"donnerblitz"],[1,"donnerschock"],[1,"karateschlag"],[1,"funkensprung"]],
+  },
+  magmar: {
+    dex: 126, name: "Magmar", role: "Lavafaust", types: ["fire"], sprite: "machollo",
+    base: [58, 25, 17, 13], grow: [4.4, 2.3, 1.6, 0], mov: 4, jmp: 2,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"karateschlag"]],
+  },
+  rossana: {
+    dex: 124, name: "Rossana", role: "Eistänzerin", types: ["ice","psychic"], sprite: "abra",
+    base: [56, 24, 18, 14], grow: [4.3, 2.2, 1.6, 0], mov: 4, jmp: 3,
+    learn: [[1,"eisstrahl"],[1,"psychokinese"],[1,"schneesturm"],[1,"genesung"]],
+  },
+  lapras: {
+    dex: 131, name: "Lapras", role: "Seeungeheuer", types: ["water","ice"], sprite: "relaxo",
+    base: [78, 24, 20, 9], grow: [5.4, 2.1, 1.8, 0], mov: 3, jmp: 2, swim: true,
+    learn: [[1,"hydropumpe"],[1,"eisstrahl"],[1,"schneesturm"],[1,"genesung"]],
+  },
+  aquana: {
+    dex: 134, name: "Aquana", role: "Wassergeist", types: ["water"], sprite: "evoli",
+    base: [68, 22, 19, 11], grow: [4.9, 2.0, 1.7, 0], mov: 4, jmp: 2, swim: true,
+    learn: [[1,"hydropumpe"],[1,"aquaknarre"],[1,"aurorastrahl"]],
+  },
+  blitza: {
+    dex: 135, name: "Blitza", role: "Donnergeist", types: ["electric"], sprite: "evoli",
+    base: [58, 24, 16, 16], grow: [4.3, 2.2, 1.5, 0], mov: 5, jmp: 2,
+    learn: [[1,"donnerblitz"],[1,"funkensprung"],[1,"ruckzuck"]],
+  },
+  flamara: {
+    dex: 136, name: "Flamara", role: "Flammengeist", types: ["fire"], sprite: "evoli",
+    base: [60, 27, 16, 13], grow: [4.4, 2.4, 1.5, 0], mov: 4, jmp: 2,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"biss"]],
+  },
+  chaneira: {
+    dex: 113, name: "Chaneira", role: "Glückspflegerin", types: ["normal"], sprite: "relaxo",
+    base: [90, 10, 12, 8], grow: [5.8, 1.2, 1.4, 0], mov: 3, jmp: 1,
+    learn: [[1,"sternschauer"],[1,"heilwoge"],[1,"genesung"],[1,"barriere"]],
+  },
+  tauros: {
+    dex: 128, name: "Tauros", role: "Wildstier", types: ["normal"], sprite: "rattfratz",
+    base: [62, 26, 19, 14], grow: [4.6, 2.3, 1.7, 0], mov: 5, jmp: 2,
+    learn: [[1,"bodyslam"],[1,"geowurf"],[1,"biss"],[1,"intensitaet"]],
+  },
+  kicklee: {
+    dex: 106, name: "Kicklee", role: "Tritt-Akrobat", types: ["fighting"], sprite: "machollo",
+    base: [54, 26, 15, 13], grow: [4.2, 2.4, 1.4, 0], mov: 4, jmp: 3,
+    learn: [[1,"karateschlag"],[1,"geowurf"],[1,"protzer"]],
+  },
+  nockchan: {
+    dex: 107, name: "Nockchan", role: "Box-Champ", types: ["fighting"], sprite: "machollo",
+    base: [54, 25, 17, 12], grow: [4.2, 2.3, 1.6, 0], mov: 4, jmp: 2,
+    learn: [[1,"karateschlag"],[1,"bodyslam"],[1,"protzer"]],
+  },
+  arktos: {
+    dex: 144, name: "Arktos", role: "Eisschwinge", types: ["ice","flying"], sprite: "taubsi",
+    base: [78, 27, 20, 13], grow: [5.2, 2.4, 1.8, 0], mov: 5, jmp: 5, fly: true,
+    learn: [[1,"eisstrahl"],[1,"schneesturm"],[1,"fluegelschlag"],[1,"aurorastrahl"]],
+  },
+  zapdos: {
+    dex: 145, name: "Zapdos", role: "Gewittervogel", types: ["electric","flying"], sprite: "taubsi",
+    base: [78, 28, 18, 15], grow: [5.2, 2.5, 1.7, 0], mov: 5, jmp: 5, fly: true,
+    learn: [[1,"donnerblitz"],[1,"funkensprung"],[1,"fluegelschlag"]],
+  },
+  lavados: {
+    dex: 146, name: "Lavados", role: "Flammenphönix", types: ["fire","flying"], sprite: "taubsi",
+    base: [78, 29, 18, 14], grow: [5.2, 2.6, 1.7, 0], mov: 5, jmp: 5, fly: true,
+    learn: [[1,"flammenwurf"],[1,"feuerwirbel"],[1,"fluegelschlag"]],
   },
 
   /* === Gegner === */
@@ -1341,8 +1567,11 @@ function manaCost(m) {
 const EVO_LEVEL = 5;
 /* Pool für Starter, Gefährten und Rekruten */
 const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein",
-                     "fukano","menki","knofensa","sterndu","voltobal","sleima","karpador"];
-const RECRUIT_POOL = [...PLAYER_POOL, "relaxo", "tragosso"];
+                     "fukano","menki","knofensa","sterndu","voltobal","sleima","karpador",
+                     "vulpix","enton","quapsel","ponita","flegmon","krabby","owei","mauzi","digda","dratini","sichlor"];
+const RECRUIT_POOL = [...PLAYER_POOL, "relaxo", "tragosso",
+                     "elektek","magmar","rossana","lapras","aquana","blitza","flamara","chaneira","tauros",
+                     "kicklee","nockchan","pinsir","arktos","zapdos","lavados"];
 /* ---------- Relikte: passive Run-Items ---------- */
 const RELICS = {
   wundsalbe:    { icon: "🧴", name: "Wundsalbe",     desc: "Nach jedem Sieg heilt der Trupp 10 % zusätzlich." },

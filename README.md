@@ -7,7 +7,7 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 
 - **Isometrische Schlachtfelder** mit Höhenstufen – wer oben steht, schlägt härter
 - **CT-Zugsystem** wie in Final Fantasy Tactics: Tempo bestimmt die Zugreihenfolge (Vorschau-Leiste inklusive)
-- **Klassisches Typensystem**: Wasser löscht Feuer, Elektro schockt Flieger, Geister sind immun gegen normale Hiebe
+- **15 Typen** (inkl. Eis, Käfer & Drache) mit klassischer Effektivität: Wasser löscht Feuer, Eis bricht Drachen, Geister sind immun gegen normale Hiebe
 - **Mana-System**: Attacken kosten 2–6 Mana (Hieb gratis), +2 Regeneration pro Runde – starke Attacken wollen getimt sein
 - **Lebendige Karten**: Tag/Nacht-Stimmungen, Regen & Gewitter, wiegende Bäume, Blätter, Glühwisps, Schmetterlinge, Lauf-Staub
 - **Musik & Sound**: eigener Chiptune-Sequencer (3 Themes: Menü, Kampf, Spuk), echte CC0-Soundeffekte (Kenney) und Sieg-/Boss-Jingles (Beatscribe)
@@ -18,7 +18,7 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Permadeath & Rückschläge**: Wer im Kampf fällt, ist tot (Pokécenter/Beleber können wiederbeleben). KP bleiben zwischen Kämpfen erhalten. Wird der Trupp besiegt, tritt der nächste gegen die **verwundeten Gegner** an – der Run endet erst, wenn niemand mehr lebt
 - **Knoten-Begegnungen** auf der Karte: Pokécenter (wiederbeleben), Wanderhändler (Münz-Shop inkl. Relikt-Beutel), Lagerfeuer (heilen oder trainieren), Schatz-Relikte
 - **Relikte**: 10 passive Run-Items (Phönixfeder, Dornenpanzer, Mana-Kristall, Glücksmünze …) – aus Elite-Siegen, Schatz-Knoten und dem Händler
-- **Verzweigte Weltkarte** (Slay-the-Spire-Stil auf Pergament): wähle deinen Pfad durch ⚔ Kämpfe, ⭐ Elite-Kämpfe, 🎏 Pokéshop (Rekrut), 🛒 Händler, 🏕 Lagerfeuer, 🏥 Pokécenter und 🎁 Schatz-Knoten zum Boss; 13 Karten, ~53 Spezies
+- **Verzweigte Weltkarte** (Slay-the-Spire-Stil auf Pergament): wähle deinen Pfad durch ⚔ Kämpfe, ⭐ Elite-Kämpfe, 🎏 Pokéshop (Rekrut), 🛒 Händler, 🏕 Lagerfeuer, 🏥 Pokécenter und 🎁 Schatz-Knoten zum Boss; 13 Karten, ~90 Spezies
 - **Entwicklungen bis Stufe 3**: Glumanda→Glutexo→**Glurak**, Turtok, Bisaflor, Simsala, Machomei, Gengar, Geowaz, Sarzenia – jede Entwicklung ist eine Lv.1-Reset-Entscheidung
 - **🔥 Endlos-Modus**: Nach Mewtu weiterkämpfen – zufällige Karten, skalierende Gegner, Tiefen-Rekord
 - **Kampf-Profi-Tools**: Gefahrenzonen-Anzeige per Gegner-Tap, Bewegungs-Undo, antippbare Zugleiste, Kampf-Log

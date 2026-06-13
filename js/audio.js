@@ -218,6 +218,24 @@ const Sfx = (() => {
     noiseShaped({ dur: .45, vol: .13, type: "bandpass", f0: 500, f1: 2200, q: 1.5, attack: .1 });
     noiseShaped({ dur: .3, vol: .08, delay: .25, type: "bandpass", f0: 2200, f1: 700, q: 1.5 });
   }
+  /* ❄ Eis: kristallines Klirren + kalter Hauch */
+  function elIce() {
+    tone(1800, .18, "triangle", .05, -300);
+    tone(2400, .14, "sine", .04, -200, .05);
+    noiseShaped({ dur: .35, vol: .06, type: "highpass", f0: 3000, q: 1.5, attack: .02 });
+  }
+  /* 🐛 Käfer: schnelles Klingen-Sirren */
+  function elBug() {
+    for (let i = 0; i < 3; i++) tone(900 + i * 200, .05, "sawtooth", .05, 300, i * .04);
+    noiseShaped({ dur: .12, vol: .08, type: "bandpass", f0: 2200, q: 4, attack: .002 });
+  }
+  /* 🐲 Drache: tiefes Grollen + Energie-Sweep */
+  function elDragon(big) {
+    tone(110, big ? .5 : .35, "sawtooth", .09, 60);
+    tone(220, .3, "square", .05, 180, .04);
+    noiseShaped({ dur: big ? .5 : .3, vol: .07, type: "lowpass", f0: 400, f1: 120, attack: .03 });
+  }
+
   /* ☠ Gift: zähes Blubbern */
   function elPoison() {
     for (let i = 0; i < 5; i++) {
@@ -243,6 +261,9 @@ const Sfx = (() => {
         case "rock": case "ground": elRock(big); break;
         case "flying":   elWind(); break;
         case "poison":   elPoison(); break;
+        case "ice":      elIce(); break;
+        case "bug":      elBug(); break;
+        case "dragon":   elDragon(big); break;
         default: this.whoosh();
       }
     },

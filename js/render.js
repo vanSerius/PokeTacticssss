@@ -79,6 +79,18 @@ const MOVE_VFX = {
   giftstachel:  { kind: "projectile", color: "#a855f7", size: 6, arc: 30, perf: "charge", charge: .35 },
   saeure:       { kind: "fall", shape: "drop", color: "#a855f7", n: 7 },
 
+  // Eis / Käfer / Drache
+  eishieb:      { kind: "slash", color: "#7dd3fc" },
+  eisstrahl:    { kind: "beam", color: "#7dd3fc", perf: "charge", charge: .45 },
+  schneesturm:  { kind: "fall", shape: "drop", color: "#bae6fd", n: 7 },
+  aurorastrahl: { kind: "beam", color: "#a5f3fc", perf: "charge", charge: .4 },
+  "käfersäbel": { kind: "slash", color: "#84cc16", perf: "blitz", hits: 2 },
+  "käferbiss":  { kind: "slash", color: "#a3e635" },
+  zornklinge:   { kind: "slash", color: "#65a30d" },
+  drachenklaue: { kind: "slash", color: "#818cf8" },
+  drachenwut:   { kind: "projectile", color: "#6366f1", size: 9, arc: 14, perf: "charge", charge: .5 },
+  wutanfall:    { kind: "explosionfx", scale: 1.4, shake: true, perf: "heavy", big: true },
+
   // Typ-Fallbacks
   _normal:   { kind: "slash" },
   _fighting: { kind: "slash", color: "#fca5a5" },
@@ -92,6 +104,9 @@ const MOVE_VFX = {
   _ground:   { kind: "quake" },
   _flying:   { kind: "slash", color: "#c7d2fe" },
   _poison:   { kind: "projectile", color: "#a855f7" },
+  _ice:      { kind: "beam", color: "#7dd3fc" },
+  _bug:      { kind: "slash", color: "#84cc16" },
+  _dragon:   { kind: "projectile", color: "#6366f1", arc: 16 },
 };
 
 /* Kenney-Geländetiles (CC0) – einmalig geladen */
