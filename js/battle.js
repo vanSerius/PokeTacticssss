@@ -397,6 +397,12 @@ class Battle {
       // Schlafende wachen bei Schaden auf
       t.statuses = t.statuses.filter((s) => s.id !== "slp");
       events.push({ type: "dmg", unit: t, val: dmg, crit, mult: p.mult, dir: p.dir, guarded: t.guarding });
+      // Rückstoß: kräftige Attacken schleudern das Ziel zurück
+      if (m.knock && t.hp > 0) {
+        const ev = events[events.length - 1];
+        ev.knockFrom = { x: t.x, y: t.y };
+        this._knockback(attacker, t, cx, cy, m.knock);
+      }
       if (m.drain) {
         const healed = Math.min(attacker.maxHp - attacker.hp, Math.round(dmg * m.drain));
         if (healed > 0) {
@@ -421,6 +427,30 @@ class Battle {
       }
     }
     return events;
+  }
+
+  /* Schleudert das Ziel bis zu n Felder vom Treffpunkt weg (stoppt an Hindernissen) */
+  _knockback(attacker, t, cx, cy, n) {
+    let dx = t.x - cx, dy = t.y - cy;            // Richtung vom Treffer-Zentrum weg
+    if (dx === 0 && dy === 0) { dx = t.x - attacker.x; dy = t.y - attacker.y; }
+    if (dx === 0 && dy === 0) return;
+    // dominante Achse -> ganzzahliger Schritt
+    let sx = 0, sy = 0;
+    if (Math.abs(dx) >= Math.abs(dy)) sx = Math.sign(dx); else sy = Math.sign(dy);
+    let { x, y } = t;
+    for (let i = 0; i < n; i++) {
+      const nx = x + sx, ny = y + sy;
+      if (!this.inBounds(nx, ny)) break;
+      if (!t.fly) {
+        const ter = TERRAIN[this.terrainAt(nx, ny)];
+        if (ter.block) break;
+        if (ter.water && !t.swim) break;
+        if (Math.abs(this.heightAt(nx, ny) - this.heightAt(x, y)) > t.jmp + 1) break; // nicht über steile Klippen
+      }
+      if (this.unitAt(nx, ny)) break;            // anderes Pokémon blockiert
+      x = nx; y = ny;
+    }
+    t.x = x; t.y = y;
   }
 
   _applyStatus(t, stId, events) {

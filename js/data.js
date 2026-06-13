@@ -61,9 +61,9 @@ const STATUS = {
 const MOVES = {
   hieb:        { name: "Hieb",        type: "normal",  cat: "p", pow: 35, rng: 1, aoe: 0, acc: 95, pp: Infinity, target: "foe", desc: "Einfacher Nahkampfangriff." },
 
-  tackle:      { name: "Tackle",      type: "normal",  cat: "p", pow: 45, rng: 1, aoe: 0, acc: 95, pp: 20, target: "foe", desc: "Rammt das Ziel mit vollem Körpereinsatz." },
+  tackle:      { name: "Tackle",      type: "normal",  cat: "p", pow: 45, rng: 1, aoe: 0, acc: 95, pp: 20, knock: 1, target: "foe", desc: "Rammt das Ziel mit vollem Körpereinsatz." },
   ruckzuck:    { name: "Ruckzuckhieb",type: "normal",  cat: "p", pow: 40, rng: 2, aoe: 0, acc: 100, pp: 12, target: "foe", desc: "Blitzschneller Sturmangriff über 2 Felder." },
-  bodyslam:    { name: "Bodyslam",    type: "normal",  cat: "p", pow: 70, rng: 1, aoe: 0, acc: 90, pp: 8, fx: { st: "par", ch: 30 }, target: "foe", desc: "Schwerer Wurf, kann paralysieren." },
+  bodyslam:    { name: "Bodyslam",    type: "normal",  cat: "p", pow: 70, rng: 1, aoe: 0, acc: 90, pp: 8, knock: 2, fx: { st: "par", ch: 30 }, target: "foe", desc: "Schwerer Körperpresser, schleudert zurück & kann paralysieren." },
   sternschauer:{ name: "Sternschauer",type: "normal",  cat: "m", pow: 55, rng: 3, aoe: 0, acc: 999, pp: 10, target: "foe", desc: "Sterne, die niemals verfehlen." },
   heuler:      { name: "Heuler",      type: "normal",  cat: "s", pow: 0,  rng: 2, aoe: 1, acc: 100, pp: 8, buff: { stat: "atk", mult: .7, dur: 3 }, target: "foe", desc: "Senkt den Angriff der Gegner im Umkreis." },
   erholung:    { name: "Erholung",    type: "normal",  cat: "s", pow: 0,  rng: 0, aoe: 0, acc: 100, pp: 3, heal: 1, fx: { st: "slp", ch: 100, self: true }, target: "self", desc: "Heilt vollständig, aber schläfert selbst ein." },
@@ -79,7 +79,7 @@ const MOVES = {
 
   aquaknarre:  { name: "Aquaknarre",  type: "water",   cat: "m", pow: 50, rng: 3, aoe: 0, acc: 95, pp: 15, target: "foe", desc: "Gezielter Wasserstrahl." },
   blubbstrahl: { name: "Blubbstrahl", type: "water",   cat: "m", pow: 65, rng: 3, aoe: 0, acc: 95, pp: 10, buff: { stat: "spd", mult: .75, dur: 2 }, target: "foe", desc: "Blasen, die das Ziel verlangsamen." },
-  hydropumpe:  { name: "Hydropumpe",  type: "water",   cat: "m", pow: 90, rng: 3, aoe: 0, acc: 80, pp: 5, target: "foe", desc: "Gewaltige Wasserkanone." },
+  hydropumpe:  { name: "Hydropumpe",  type: "water",   cat: "m", pow: 90, rng: 3, aoe: 0, acc: 80, pp: 5, knock: 2, target: "foe", desc: "Gewaltige Wasserkanone, die wegspült." },
   panzerschutz:{ name: "Panzerschutz",type: "water",   cat: "s", pow: 0,  rng: 0, aoe: 0, acc: 100, pp: 6, buff: { stat: "def", mult: 1.5, dur: 3 }, target: "self", desc: "Erhöht die eigene Verteidigung stark." },
 
   rankenhieb:  { name: "Rankenhieb",  type: "grass",   cat: "p", pow: 50, rng: 2, aoe: 0, acc: 100, pp: 15, target: "foe", desc: "Peitscht mit Ranken über 2 Felder." },
@@ -94,25 +94,25 @@ const MOVES = {
   barriere:    { name: "Barriere",    type: "psychic", cat: "s", pow: 0,  rng: 2, aoe: 0, acc: 100, pp: 6, buff: { stat: "def", mult: 1.4, dur: 3 }, target: "ally", desc: "Schützt einen Verbündeten." },
   hypnose:     { name: "Hypnose",     type: "psychic", cat: "s", pow: 0,  rng: 3, aoe: 0, acc: 65, pp: 6, fx: { st: "slp", ch: 100 }, target: "foe", desc: "Hypnotisiert das Ziel in den Schlaf." },
 
-  karateschlag:{ name: "Karateschlag",type: "fighting",cat: "p", pow: 55, rng: 1, aoe: 0, acc: 95, pp: 15, crit: 15, target: "foe", desc: "Präziser Schlag, oft Volltreffer." },
-  geowurf:     { name: "Geowurf",     type: "fighting",cat: "p", pow: 70, rng: 1, aoe: 0, acc: 90, pp: 8, target: "foe", desc: "Schleudert das Ziel zu Boden." },
+  karateschlag:{ name: "Karateschlag",type: "fighting",cat: "p", pow: 55, rng: 1, aoe: 0, acc: 95, pp: 15, crit: 15, knock: 1, target: "foe", desc: "Präziser Schlag, oft Volltreffer." },
+  geowurf:     { name: "Geowurf",     type: "fighting",cat: "p", pow: 70, rng: 1, aoe: 0, acc: 90, pp: 8, knock: 3, target: "foe", desc: "Schleudert das Ziel weit zu Boden." },
   protzer:     { name: "Protzer",     type: "fighting",cat: "s", pow: 0,  rng: 0, aoe: 0, acc: 100, pp: 6, buff: { stat: "atk", mult: 1.4, dur: 3 }, target: "self", desc: "Pumpt sich auf: Angriff steigt." },
 
   schlecker:   { name: "Schlecker",   type: "ghost",   cat: "p", pow: 35, rng: 1, aoe: 0, acc: 100, pp: 15, fx: { st: "par", ch: 30 }, target: "foe", desc: "Eklige Zunge, kann paralysieren." },
   nachtnebel:  { name: "Nachtnebel",  type: "ghost",   cat: "m", pow: 55, rng: 3, aoe: 0, acc: 95, pp: 12, target: "foe", desc: "Unheimlicher Schattenstoß." },
   spukball:    { name: "Spukball",    type: "ghost",   cat: "m", pow: 75, rng: 3, aoe: 0, acc: 95, pp: 8, target: "foe", desc: "Geballte Schattenenergie." },
 
-  steinwurf:   { name: "Steinwurf",   type: "rock",    cat: "p", pow: 55, rng: 3, aoe: 0, acc: 90, pp: 12, target: "foe", desc: "Wirft einen Felsbrocken." },
+  steinwurf:   { name: "Steinwurf",   type: "rock",    cat: "p", pow: 55, rng: 3, aoe: 0, acc: 90, pp: 12, knock: 1, target: "foe", desc: "Wirft einen Felsbrocken." },
   steinhagel:  { name: "Steinhagel",  type: "rock",    cat: "p", pow: 65, rng: 3, aoe: 1, acc: 85, pp: 6, target: "foe", desc: "Steinschlag im Kreuzbereich." },
   haertner:    { name: "Härtner",     type: "rock",    cat: "s", pow: 0,  rng: 0, aoe: 0, acc: 100, pp: 8, buff: { stat: "def", mult: 1.4, dur: 3 }, target: "self", desc: "Verhärtet den Körper." },
 
-  knochenkeule:{ name: "Knochenkeule",type: "ground",  cat: "p", pow: 60, rng: 1, aoe: 0, acc: 95, pp: 12, target: "foe", desc: "Schlag mit der Knochenkeule." },
+  knochenkeule:{ name: "Knochenkeule",type: "ground",  cat: "p", pow: 60, rng: 1, aoe: 0, acc: 95, pp: 12, knock: 1, target: "foe", desc: "Schlag mit der Knochenkeule." },
   knochmerang: { name: "Knochmerang", type: "ground",  cat: "p", pow: 55, rng: 3, aoe: 0, acc: 90, pp: 8, target: "foe", desc: "Geworfener Knochen-Bumerang." },
-  intensitaet: { name: "Intensität",  type: "ground",  cat: "p", pow: 60, rng: 0, aoe: 2, acc: 95, pp: 6, target: "foe", desc: "Erdbeben rund um den Anwender." },
+  intensitaet: { name: "Intensität",  type: "ground",  cat: "p", pow: 60, rng: 0, aoe: 2, acc: 95, pp: 6, knock: 1, target: "foe", desc: "Erdbeben rund um den Anwender." },
   schaufler:   { name: "Schaufler",   type: "ground",  cat: "p", pow: 65, rng: 2, aoe: 0, acc: 95, pp: 8, target: "foe", desc: "Angriff aus dem Untergrund." },
 
   windstoss:   { name: "Windstoß",    type: "flying",  cat: "m", pow: 45, rng: 3, aoe: 0, acc: 95, pp: 15, target: "foe", desc: "Schneidende Windböe." },
-  fluegelschlag:{ name:"Flügelschlag",type: "flying",  cat: "p", pow: 60, rng: 2, aoe: 0, acc: 95, pp: 10, target: "foe", desc: "Schlag mit harten Schwingen." },
+  fluegelschlag:{ name:"Flügelschlag",type: "flying",  cat: "p", pow: 60, rng: 2, aoe: 0, acc: 95, pp: 10, knock: 1, target: "foe", desc: "Schlag mit harten Schwingen." },
   schnabel:    { name: "Schnabel",    type: "flying",  cat: "p", pow: 45, rng: 1, aoe: 0, acc: 100, pp: 15, target: "foe", desc: "Pickt mit spitzem Schnabel." },
 
   giftstachel: { name: "Giftstachel", type: "poison",  cat: "p", pow: 40, rng: 2, aoe: 0, acc: 95, pp: 15, fx: { st: "psn", ch: 30 }, target: "foe", desc: "Giftiger Stich." },

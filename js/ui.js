@@ -171,6 +171,13 @@ const BattleUI = (() => {
           if (ev.dir === "back") renderer.addPopup(u.x, u.y, "Rückenangriff!", "#ffb03a");
           if (ev.guarded) renderer.addPopup(u.x, u.y, "🛡 Geblockt!", "#7dd3fc");
           await withTimeout(renderer.animFlash(u), 1200);
+          if (ev.knockFrom && u.alive && (ev.knockFrom.x !== u.x || ev.knockFrom.y !== u.y)) {
+            renderer.addPopup(u.x, u.y, "↗ Rückstoß!", "#fbbf24");
+            await withTimeout(renderer.animKnock(u, ev.knockFrom), 800);
+            renderer.burst(u.x, u.y, "rgba(214,200,170,.8)", 7);
+            renderer.shake(3);
+            updateTurnOrder();
+          }
           showUnitCard(battle.active);
           break;
         }
@@ -490,10 +497,9 @@ const BattleUI = (() => {
         const m = MOVES[currentMove];
         log(`<b>${u.name}</b> setzt <b>${m.name}</b> ein`);
         renderer.centerOnTile(pendingTile.x, pendingTile.y);
-        const melee = m.cat === "p" && m.rng <= 1;
-        await withTimeout(renderer.animLunge(u, pendingTile.x, pendingTile.y, melee ? .4 : .15), 1200);
         const aoe = battle.aoeTiles(currentMove, pendingTile.x, pendingTile.y);
-        await withTimeout(renderer.animAttackFx(currentMove, { x: u.x, y: u.y }, pendingTile, aoe), 3000);
+        await withTimeout(renderer.performAttack(u, currentMove, { x: u.x, y: u.y }, pendingTile, aoe), 4500);
+        u.alpha = 1; u.animScale = 1; u.rx = u.x; u.ry = u.y;
         const events = battle.resolveAttack(u, currentMove, pendingTile.x, pendingTile.y);
         await playEvents(events);
         acted = true;
@@ -577,10 +583,9 @@ const BattleUI = (() => {
       log(`<b>${u.name}</b> setzt <b>${m.name}</b> ein`);
       battle.setFacingTowards(u, decision.action.x, decision.action.y);
       renderer.centerOnTile(decision.action.x, decision.action.y);
-      const melee = m.cat === "p" && m.rng <= 1;
-      await withTimeout(renderer.animLunge(u, decision.action.x, decision.action.y, melee ? .4 : .15), 1200);
       const aoe = battle.aoeTiles(mv, decision.action.x, decision.action.y);
-      await withTimeout(renderer.animAttackFx(mv, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 3000);
+      await withTimeout(renderer.performAttack(u, mv, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 4500);
+      u.alpha = 1; u.animScale = 1; u.rx = u.x; u.ry = u.y;
       const events = battle.resolveAttack(u, mv, decision.action.x, decision.action.y);
       await playEvents(events);
       acted = true;

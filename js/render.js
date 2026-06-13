@@ -14,11 +14,11 @@ const MOVE_VFX = {
   // Normal / Kampf / Flug (Nahkampf & Treffer)
   hieb:         { kind: "slash" },
   tackle:       { kind: "slash" },
-  ruckzuck:     { kind: "slash", color: "#fff" },
-  bodyslam:     { kind: "explosionfx", scale: 1.4, shake: true },
+  ruckzuck:     { kind: "slash", color: "#fff", perf: "blitz", hits: 3 },
+  bodyslam:     { kind: "explosionfx", scale: 1.5, shake: true, perf: "heavy", big: true },
   biss:         { kind: "slash", color: "#e5e7eb" },
-  karateschlag: { kind: "slash", color: "#fca5a5" },
-  geowurf:      { kind: "explosionfx", scale: 1.3, shake: true },
+  karateschlag: { kind: "slash", color: "#fca5a5", perf: "blitz", hits: 2 },
+  geowurf:      { kind: "explosionfx", scale: 1.4, shake: true, perf: "heavy", big: true },
   schnabel:     { kind: "slash", color: "#c7d2fe" },
   fluegelschlag:{ kind: "tornadofx", scale: 1.3 },
   windstoss:    { kind: "windproj", scale: 1.3 },
@@ -46,7 +46,7 @@ const MOVE_VFX = {
   panzerschutz: { kind: "ring", color: "#93c5fd" },
 
   // Pflanze
-  rankenhieb:   { kind: "slash", color: "#4ade80" },
+  rankenhieb:   { kind: "whip", color: "#4ade80" },
   rasierblatt:  { kind: "fall", shape: "leaf", color: "#4ade80", n: 6 },
   megasauger:   { kind: "drainbeam", color: "#86efac" },
   schlafpuder:  { kind: "fall", shape: "drop", color: "#d8b4fe", n: 8, dur: .9 },
@@ -779,6 +779,175 @@ class IsoRenderer {
   }
   wait(ms) { return new Promise((r) => setTimeout(r, ms * (Settings.data.fast ? .55 : 1))); }
 
+  /* Tween über ms; fn(k) je Frame mit k=0..1 (Fast-Modus verkürzt) */
+  _tween(ms, fn) {
+    ms *= (Settings.data.fast ? .6 : 1);
+    return new Promise((res) => {
+      const start = performance.now();
+      const step = (now) => {
+        const k = Math.min(1, (now - start) / Math.max(1, ms));
+        try { fn(k); } catch (e) {}
+        if (k < 1) requestAnimationFrame(step); else res();
+      };
+      requestAnimationFrame(step);
+    });
+  }
+
+  /* Ziel nach Rückstoß von altPos zur (bereits gesetzten) neuen Kachel gleiten lassen */
+  animKnock(unit, from) {
+    const toX = unit.x, toY = unit.y;
+    unit.rx = from.x; unit.ry = from.y;
+    return this._tween(230, (k) => {
+      const e = 1 - Math.pow(1 - k, 2);
+      unit.rx = from.x + (toX - from.x) * e;
+      unit.ry = from.y + (toY - from.y) * e;
+      unit.hop = Math.sin(k * Math.PI) * 5;
+    }).then(() => { unit.rx = toX; unit.ry = toY; unit.hop = 0; });
+  }
+
+  /* ============================================================
+     Attacken-Choreografie: pro Move ein eigener Auftritt
+     ============================================================ */
+  async performAttack(attacker, moveId, fromTile, toTile, aoeTiles) {
+    const m = MOVES[moveId];
+    const spec = MOVE_VFX[moveId] || MOVE_VFX["_" + m.type] || {};
+    const perf = spec.perf || ((m.cat === "p" && m.rng <= 1) ? "lunge" : "cast");
+    const hx = attacker.x, hy = attacker.y;
+    try {
+      if (perf === "blitz") await this._perfBlitz(attacker, moveId, toTile, aoeTiles, spec);
+      else if (perf === "heavy") await this._perfHeavy(attacker, moveId, toTile, aoeTiles, spec);
+      else if (perf === "whip") await this._perfWhip(attacker, moveId, fromTile, toTile, aoeTiles, spec);
+      else if (perf === "cast") {
+        await this.animLunge(attacker, toTile.x, toTile.y, .13);
+        await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
+      } else { // lunge (Standard-Nahkampf)
+        await this.animLunge(attacker, toTile.x, toTile.y, .4);
+        await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
+      }
+    } finally {
+      attacker.alpha = 1; attacker.animScale = 1; attacker.flash = false;
+      attacker.rx = hx; attacker.ry = hy; attacker.hop = 0;
+    }
+  }
+
+  /* Ruckzuck & Co.: Anime-Blitz – verschwinden, neben dem Ziel auftauchen, treffen */
+  async _perfBlitz(attacker, moveId, toTile, aoeTiles, spec) {
+    const hits = spec.hits || 3;
+    const col = spec.color || "#fff";
+    const offsets = [[-0.7, 0], [0.7, 0], [0, -0.75], [0, 0.7], [-0.6, -0.5], [0.6, 0.4]];
+    let prev = -1;
+    const sfx = (typeof Sfx !== "undefined");
+    attacker.alpha = 0;
+    this.burst(attacker.x, attacker.y, col, 8);
+    for (let i = 0; i < hits; i++) {
+      let o; do { o = Math.floor(Math.random() * offsets.length); } while (o === prev && offsets.length > 1);
+      prev = o;
+      const [dx, dy] = offsets[o];
+      attacker.rx = toTile.x + dx; attacker.ry = toTile.y + dy;
+      this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+      this.burst(Math.round(attacker.rx), Math.round(attacker.ry), col, 4);
+      await this.wait(45);
+      attacker.alpha = 1;
+      if (sfx) Sfx.whoosh();
+      this.fxSlash(toTile, { color: col, dur: .2 });
+      this.shake(4);
+      attacker.flash = true;
+      await this.wait(70);
+      attacker.flash = false;
+      attacker.alpha = 0;
+      this.burst(Math.round(attacker.rx), Math.round(attacker.ry), col, 5);
+      await this.wait(40);
+    }
+    attacker.rx = attacker.x; attacker.ry = attacker.y;
+    await this.wait(50);
+    attacker.alpha = 1;
+    this.burst(attacker.x, attacker.y, col, 6);
+  }
+
+  /* Bodyslam / Geowurf: mächtig langsames Ausholen, dann wuchtiger Aufschlag */
+  async _perfHeavy(attacker, moveId, toTile, aoeTiles, spec) {
+    const hx = attacker.x, hy = attacker.y;
+    const dx = toTile.x - hx, dy = toTile.y - hy;
+    const d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    await this._tween(420, (k) => {
+      const e = 1 - Math.pow(1 - k, 2);
+      attacker.rx = hx - ux * 0.32 * e;
+      attacker.ry = hy - uy * 0.32 * e;
+      attacker.animScale = 1 + 0.22 * e;
+      attacker.hop = e * 4;
+    });
+    if (typeof Sfx !== "undefined") Sfx.rumble();
+    await this.wait(120);
+    const ox = hx + dx * 0.62, oy = hy + dy * 0.62;
+    const bx = hx - ux * 0.32, by = hy - uy * 0.32;
+    await this._tween(120, (k) => {
+      attacker.rx = bx + (ox - bx) * k;
+      attacker.ry = by + (oy - by) * k;
+      attacker.animScale = 1.22 - 0.22 * k;
+      attacker.hop = (1 - k) * 4;
+    });
+    this.shake(spec.big ? 13 : 9);
+    if (navigator.vibrate) try { navigator.vibrate(40); } catch (e) {}
+    await this.animAttackFx(moveId, { x: hx, y: hy }, toTile, aoeTiles);
+    const sx = attacker.rx, sy = attacker.ry;
+    await this._tween(240, (k) => {
+      const e = 1 - Math.pow(1 - k, 2);
+      attacker.rx = sx + (hx - sx) * e;
+      attacker.ry = sy + (hy - sy) * e;
+      attacker.animScale = 1;
+    });
+  }
+
+  /* Rankenhieb: eine Ranke schießt peitschend vor */
+  async _perfWhip(attacker, moveId, fromTile, toTile, aoeTiles, spec) {
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    if (typeof Sfx !== "undefined") Sfx.whoosh();
+    await this.animLunge(attacker, toTile.x, toTile.y, .12);
+    await this.fxVine(fromTile, toTile, { color: spec.color || "#4ade80" });
+    this.fxSlash(toTile, { color: spec.color || "#4ade80", dur: .22 });
+    this.shake(4);
+  }
+
+  /* Vine-Whip-Effekt: sich verjüngende Ranke mit Peitschen-Bogen */
+  fxVine(from, to, opt = {}) {
+    const a = this._wpt(from), b = this._wpt(to);
+    const color = opt.color || "#4ade80";
+    const dur = opt.dur || .42;
+    let px = -(b.y - a.y), py = (b.x - a.x);
+    const pl = Math.hypot(px, py) || 1; px /= pl; py /= pl;
+    return this._addFx(dur, (ctx, r, k) => {
+      const z = r.cam.zoom;
+      const ext = k < 0.45 ? k / 0.45 : 1;
+      const retract = k > 0.7 ? (k - 0.7) / 0.3 : 0;
+      const reach = Math.max(0, ext * (1 - retract));
+      const wob = Math.sin(Math.min(1, ext) * Math.PI) * 26 * (1 - ext) + Math.sin(k * 30) * 4 * reach;
+      const N = 12;
+      ctx.lineCap = "round";
+      const pts = [];
+      for (let i = 0; i <= N; i++) {
+        const tt = (i / N) * reach;
+        const bend = Math.sin(tt / Math.max(.001, reach) * Math.PI) * wob;
+        pts.push([a.x + (b.x - a.x) * tt + px * bend, a.y + (b.y - a.y) * tt + py * bend]);
+      }
+      for (let i = 0; i < pts.length - 1; i++) {
+        const w = (1 - i / pts.length) * 7 + 1.5;
+        const s1 = r.worldToScreen(pts[i][0], pts[i][1]);
+        const s2 = r.worldToScreen(pts[i + 1][0], pts[i + 1][1]);
+        ctx.strokeStyle = i % 3 === 0 ? "#86efac" : color;
+        ctx.lineWidth = w * z;
+        ctx.beginPath(); ctx.moveTo(s1.x, s1.y); ctx.lineTo(s2.x, s2.y); ctx.stroke();
+      }
+      if (reach > 0.1) {
+        const tip = r.worldToScreen(pts[pts.length - 1][0], pts[pts.length - 1][1]);
+        ctx.fillStyle = "#bbf7d0";
+        ctx.beginPath();
+        ctx.ellipse(tip.x, tip.y, 5 * z, 2.4 * z, Math.atan2(b.y - a.y, b.x - a.x), 0, Math.PI * 2);
+        ctx.fill();
+      }
+    }, false);
+  }
+
   /* ---------- Render-Loop ----------
      Wichtig: rAF wird ZUERST geplant und alles in try/catch gekapselt –
      ein einzelner Fehler darf das Spiel niemals einfrieren. */
@@ -1397,7 +1566,7 @@ class IsoRenderer {
     const h0 = b.heightAt(Math.round(tx), Math.round(ty));
     const c = this._tileCenterWorld(tx, ty, h0);
     const ground = this.worldToScreen(c.x, c.y);   // Fußpunkt auf der Kachel
-    const size = 52 * z * (SPECIES[u.species].scale || 1) * (u.boss ? 1.15 : 1);
+    const size = 52 * z * (SPECIES[u.species].scale || 1) * (u.boss ? 1.15 : 1) * (u.animScale || 1);
     const alpha = u.alpha !== undefined ? u.alpha : 1;
     if (alpha <= 0) return;
 
