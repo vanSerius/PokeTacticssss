@@ -48,13 +48,14 @@ function healEntry(e, amount) {
 /* ============================================================
    Verzweigte Weltkarte (Slay-the-Spire-Stil) auf Pergament
    ============================================================ */
-const MAP_COLS = 4;
-const MAP_ROWS = 12;          // Reihe 0 = Start unten, Reihe 11 = Boss oben
-const MAP_PATHS = 5;
+const MAP_COLS = 5;
+const MAP_ROWS = 13;          // Reihe 0 = Start unten, Reihe 12 = Boss oben
+const MAP_PATHS = 7;
 
 const NODE_META = {
   battle:   { icon: "⚔", label: "Kampf" },
   elite:    { icon: "⭐", label: "Elite" },
+  legend:   { icon: "✨", label: "Legende" },
   shop:     { icon: "🎏", label: "Pokéshop" },
   merchant: { icon: "🛒", label: "Händler" },
   camp:     { icon: "🏕", label: "Lager" },
@@ -67,13 +68,13 @@ const MAP_TIERS = { early: [0, 1, 7, 8], mid: [2, 3, 9, 10], late: [4, 5, 11, 12
 function mapBattleId(row, elite) {
   const f = row / (MAP_ROWS - 2);
   let pool;
-  if (elite) pool = f < 0.5 ? MAP_TIERS.mid : MAP_TIERS.late;
-  else pool = f < 0.34 ? MAP_TIERS.early : f < 0.67 ? MAP_TIERS.mid : MAP_TIERS.late;
+  if (elite) pool = f < 0.45 ? MAP_TIERS.mid : MAP_TIERS.late;
+  else pool = f < 0.32 ? MAP_TIERS.early : f < 0.62 ? MAP_TIERS.mid : MAP_TIERS.late;
   return sample(pool, 1)[0];
 }
-function mapRowBoost(row) { return Math.floor(row / 3); }
+// Gegner-Verstärkung: die ersten Reihen ganz sanft, danach langsam steigend
+function mapRowBoost(row) { return Math.max(0, Math.floor((row - 3) / 2)); }
 
-/* deterministischer Jitter pro Knoten-Id */
 function nodeJitter(id) {
   let h = 0;
   for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
@@ -112,44 +113,96 @@ function generateMap(loop = 0) {
     }
   }
 
-  // Eltern bestimmen (für Typ-Constraints)
+  // Verbindungs-Pass: mehr Quer-Verzweigungen, damit man die Spur wechseln kann.
+  const crosses = (row, a, b) => {
+    // Kante (row,a)->(row+1,b); kreuzt eine bestehende Kante mit umgekehrter Seite?
+    for (const id of rows[row]) {
+      const fa = nodes[id].col;
+      if (fa === a) continue;
+      for (const cid of edges[id]) {
+        if (nodes[cid].row !== row + 1) continue;
+        const tb = nodes[cid].col;
+        if ((a < fa && b > tb) || (a > fa && b < tb)) return true;
+      }
+    }
+    return false;
+  };
+  for (let row = 0; row < MAP_ROWS - 1; row++) {
+    for (const id of [...rows[row]].sort((x, y) => nodes[x].col - nodes[y].col)) {
+      if (row === MAP_ROWS - 2) {                    // letzte Reihe -> immer zum Boss
+        if (!edges[id].includes(bossId)) edges[id].push(bossId);
+        continue;
+      }
+      const a = nodes[id].col;
+      const cand = [];
+      for (let d = -1; d <= 1; d++) {
+        const c = colNode[row + 1][a + d];
+        if (c !== undefined && !edges[id].includes(c) && !crosses(row, a, a + d)) cand.push(c);
+      }
+      // mindestens 2 Wege nach oben, falls möglich
+      while (edges[id].length < 2 && cand.length) {
+        edges[id].push(cand.shift());
+      }
+    }
+  }
+
   const parents = {};
   for (const id in edges) for (const c of edges[id]) (parents[c] = parents[c] || []).push(id);
 
-  // Typen zuweisen (Reihe 0 = Kampf, Reihe vor Boss = Lager)
-  for (let row = 0; row < MAP_ROWS - 1; row++) {
-    for (const id of rows[row]) {
+  // Typen zuweisen – mit Shop-Pity (im Schnitt ~alle 2 Reihen ein Pokéshop)
+  let lastShop = 0;
+  for (let row = 1; row < MAP_ROWS - 1; row++) {
+    const rowIds = [...rows[row]];
+    if (row === MAP_ROWS - 2) { for (const id of rowIds) nodes[id].type = "camp"; continue; }
+    // Shop-Pity: zu lange kein Pokéshop -> einen erzwingen
+    if (row - lastShop >= 2 && rowIds.length) {
+      const pick = rowIds[Math.floor(Math.random() * rowIds.length)];
+      nodes[pick].type = "shop"; lastShop = row;
+    }
+    for (const id of rowIds) {
       if (nodes[id].type) continue;
-      if (row === 0) { nodes[id].type = "battle"; continue; }
-      if (row === MAP_ROWS - 2) { nodes[id].type = "camp"; continue; }
       const ptypes = (parents[id] || []).map((p) => nodes[p].type);
       const w = {
-        battle: 50,
-        elite: row >= 4 ? 16 : 0,
-        shop: 13,
-        merchant: 11,
-        camp: 8,
-        center: row >= 2 ? 11 : 0,
+        battle: 42,
+        elite: row >= 4 ? 15 : 0,
+        shop: 20,
+        merchant: 10,
+        camp: 7,
+        center: row >= 2 ? 10 : 0,
         treasure: 7,
       };
       if (ptypes.includes("elite")) w.elite = 0;
-      for (const t of ["shop", "merchant", "camp", "center", "treasure"]) if (ptypes.includes(t)) w[t] = Math.round(w[t] * 0.15);
+      for (const t of ["shop", "merchant", "camp", "center", "treasure"]) if (ptypes.includes(t)) w[t] = Math.round(w[t] * 0.2);
       let tot = 0; for (const k in w) tot += w[k];
       let r = Math.random() * tot, pick = "battle";
       for (const k in w) { r -= w[k]; if (r <= 0) { pick = k; break; } }
       nodes[id].type = pick;
+      if (pick === "shop") lastShop = row;
     }
   }
+  // Reihe 0 = Kämpfe (Einstieg)
+  for (const id of rows[0]) nodes[id].type = "battle";
 
-  // Kampf-/Elite-Karten + Positionen
-  const topM = 0.05, botM = 0.055, leftM = 0.17;
+  // Genau einen Legenden-Boss-Knoten in der mittleren/oberen Kartenhälfte platzieren
+  const legCand = [];
+  for (let row = 4; row <= MAP_ROWS - 4; row++) for (const id of rows[row]) if (nodes[id].type === "battle") legCand.push(id);
+  if (legCand.length) {
+    const lid = legCand[Math.floor(Math.random() * legCand.length)];
+    const sp = LEGENDARIES[Math.floor(Math.random() * LEGENDARIES.length)];
+    nodes[lid].type = "legend";
+    nodes[lid].legendSp = sp;
+  }
+
+  // Kampf-/Elite-/Legenden-Karten + Positionen
+  const topM = 0.045, botM = 0.05, leftM = 0.13;
   for (const id in nodes) {
     const n = nodes[id];
     if (n.type === "battle" || n.type === "elite") { n.mapId = mapBattleId(n.row, n.type === "elite"); n.elite = n.type === "elite"; }
+    if (n.type === "legend") { n.mapId = LEGEND_BATTLE[n.legendSp]; }
     if (n.type === "boss") { n.mapId = 6; }
-    const jit = n.type === "boss" ? 0 : nodeJitter(id) * 0.05;
+    const jit = n.type === "boss" ? 0 : nodeJitter(id) * 0.04;
     n.nx = n.type === "boss" ? 0.5 : leftM + (n.col + 0.5) / MAP_COLS * (1 - 2 * leftM) + jit;
-    n.nx = Math.max(0.08, Math.min(0.92, n.nx));
+    n.nx = Math.max(0.07, Math.min(0.93, n.nx));
     n.ny = topM + (1 - n.row / (MAP_ROWS - 1)) * (1 - topM - botM);
   }
   return { rows, nodes, edges, bossId, loop };
@@ -157,7 +210,7 @@ function generateMap(loop = 0) {
 
 function mapBoost(node) {
   const run = Game.save.run;
-  return mapRowBoost(node.row) + (node.elite ? 2 : 0) + (run.loop || 0) * 6;
+  return mapRowBoost(node.row) + (node.elite ? 2 : 0) + (node.type === "legend" ? 2 : 0) + (run.loop || 0) * 6;
 }
 function availableNodes() {
   const run = Game.save.run;
@@ -177,8 +230,8 @@ async function enterNode(id) {
   const run = Game.save.run;
   const n = run.map.nodes[id];
   Game.pendingNode = id;
-  if (n.type === "battle" || n.type === "elite" || n.type === "boss") {
-    openPartySelect(BATTLES[n.mapId], !!n.elite, id);   // startBattle rückt bei Sieg vor
+  if (n.type === "battle" || n.type === "elite" || n.type === "boss" || n.type === "legend") {
+    openPartySelect(BATTLES[n.mapId], n.type === "elite" || n.type === "legend", id);
     return;
   }
   // Nicht-Kampf-Knoten: Ereignis abspielen, dann vorrücken
@@ -261,6 +314,7 @@ function writeSave() {
 }
 function ensureSave() {
   if (!Game.save) Game.save = { best: { stage: 0, wins: 0 }, run: null };
+  if (!Game.save.legends) Game.save.legends = [];   // jemals besiegte Legendäre (im Shop freigeschaltet)
 }
 
 /* ---------- Generischer Auswahl-Bildschirm ----------
@@ -272,15 +326,18 @@ function showChoice({ title, sub, cards, skipLabel }) {
     $("#choice-sub").innerHTML = sub || "";
     const cont = $("#choice-cards");
     cont.innerHTML = "";
+    let hasSpecial = false;
     cards.forEach((c, i) => {
       const el = document.createElement("div");
-      el.className = "choice-card" + (c.dim ? " dead" : "");
+      const rar = c.rarity && (c.rarity === "rare" || c.rarity === "legend") ? " " + c.rarity : "";
+      if (rar) hasSpecial = true;
+      el.className = "choice-card" + (c.dim ? " dead" : "") + rar;
       const left = c.speciesId
         ? `<div class="cc-left"><canvas width="64" height="64"></canvas></div>`
         : `<div class="cc-left">${c.icon || "✦"}</div>`;
       el.innerHTML = `${left}
         <div class="cc-main">
-          <div class="cc-title">${c.title}</div>
+          <div class="cc-title">${c.title}${c.flair ? ` <span class="cc-flair">${c.flair}</span>` : ""}</div>
           <div class="cc-desc">${c.desc || ""}</div>
           ${c.chips ? `<div class="cc-chips">${c.chips}</div>` : ""}
         </div>`;
@@ -288,6 +345,19 @@ function showChoice({ title, sub, cards, skipLabel }) {
       el.addEventListener("click", () => { Sfx.select(); resolve(i); });
       cont.appendChild(el);
     });
+    // Glückstreffer-Banner bei seltener/legendärer Begegnung
+    const banner = $("#choice-rare-banner");
+    if (banner) {
+      if (hasSpecial) {
+        const legend = cards.some((c) => c.rarity === "legend");
+        banner.textContent = legend ? "★ LEGENDÄRE BEGEGNUNG! Glück gehabt!" : "✦ Seltene Begegnung!";
+        banner.className = "choice-rare-banner" + (legend ? " legend" : "");
+        banner.classList.remove("hidden");
+        try { (legend ? Sfx.champion : Sfx.reveal).call(Sfx); } catch (e) {}
+      } else {
+        banner.classList.add("hidden");
+      }
+    }
     const skip = $("#btn-choice-skip");
     if (skipLabel) {
       skip.textContent = skipLabel;
@@ -792,17 +862,53 @@ function playEvolutionAnim(fromSp, toSp) {
 }
 
 /* ---------- Rekruten-Angebot ---------- */
+/* Fortschritt 0..1 des aktuellen Runs (für Seltenheits-/Stufen-Gating) */
+function runProgress() {
+  const run = Game.save.run;
+  const stage = run.node != null && run.map ? run.map.nodes[run.node].row : 0;
+  return Math.min(1, stage / (MAP_ROWS - 2) + (run.loop || 0));
+}
+
+/* Erlaubte Seltenheiten je Fortschritt: früh nur common, ab Hälfte 2. Stufe, spät Endstufen */
+function allowedRarities(prog) {
+  const set = ["common"];
+  if (prog >= 0.40) set.push("uncommon");   // ~ab der Hälfte: Entwicklungsstufe 2
+  if (prog >= 0.72) set.push("rare");        // spät: Endstufen
+  return set;
+}
+
+/* Gewichtete Rekruten-Angebote nach Seltenheit & Fortschritt (Legendäre nur wenn freigeschaltet) */
+function recruitOffers(count) {
+  const run = Game.save.run;
+  const prog = runProgress();
+  const allowed = allowedRarities(prog);
+  const inTeam = new Set(run.roster.map((e) => e.sp));
+  const weightFor = { common: 100, uncommon: 55, rare: 26, legend: 8 };
+  let pool = RECRUIT_POOL.filter((s) => !inTeam.has(s) && allowed.includes(rarityOf(s)));
+  // freigeschaltete Legendäre spät beimischen
+  if (prog >= 0.6) for (const s of (Game.save.legends || [])) if (!inTeam.has(s) && !pool.includes(s)) pool.push(s);
+  if (pool.length < count) pool = RECRUIT_POOL.filter((s) => !inTeam.has(s));
+  if (pool.length < count) pool = RECRUIT_POOL.slice();
+  // gewichtetes Ziehen ohne Wiederholung
+  const picks = [];
+  const work = pool.slice();
+  while (picks.length < count && work.length) {
+    let tot = 0; for (const s of work) tot += weightFor[rarityOf(s)] || 100;
+    let r = Math.random() * tot, idx = 0;
+    for (; idx < work.length; idx++) { r -= weightFor[rarityOf(work[idx])] || 100; if (r <= 0) break; }
+    picks.push(work.splice(Math.min(idx, work.length - 1), 1)[0]);
+  }
+  const lvl = Math.max(3, 3 + Math.round(runDepth() * 0.7));
+  return picks.map((s) => mkEntry(s, lvl));
+}
+
 async function runRecruitChoice(levelups) {
   const run = Game.save.run;
-  const lvl = Math.max(3, 3 + Math.round(runDepth() * 0.7));
-  const inTeam = new Set(run.roster.map((e) => e.sp));
-  let pool = RECRUIT_POOL.filter((s) => !inTeam.has(s));
-  if (pool.length < 2) pool = RECRUIT_POOL;
-  const offers = sample(pool, 2).map((s) => mkEntry(s, lvl));
+  const offers = recruitOffers(3);
   const i = await showChoice({
-    title: "🤝 Ein Rekrut möchte beitreten!",
-    sub: "Wähle einen Neuzugang – oder lehne ab und dein Team erhält je 25 EP.",
-    cards: offers.map((e) => pokemonCard(e)),
+    title: "🤝 Pokéshop – ein Neuzugang!",
+    sub: "Wähle einen Begleiter – oder lehne ab und dein Team erhält je 25 EP.",
+    cards: offers.map((e) => recruitCard(e)),
     skipLabel: "Ablehnen (+25 EP für alle)",
   });
   if (i === -1) {
@@ -811,6 +917,41 @@ async function runRecruitChoice(levelups) {
     Sfx.treasure();
     run.roster.push(offers[i]);
   }
+  writeSave();
+}
+
+/* Rekruten-Karte mit Seltenheits-Flair */
+function recruitCard(entry) {
+  const c = pokemonCard(entry);
+  const rar = rarityOf(entry.sp);
+  c.rarity = rar;
+  if (rar === "rare") { c.flair = "✦ SELTEN"; }
+  else if (rar === "legend") { c.flair = "★ LEGENDÄR"; }
+  return c;
+}
+
+/* Garantiertes Legendären-Angebot nach Sieg über einen Legenden-Boss */
+async function offerLegendRecruit(sp, levelups) {
+  const run = Game.save.run;
+  if (!Game.save.legends.includes(sp)) Game.save.legends.push(sp);
+  const lvl = Math.max(6, 3 + Math.round(runDepth() * 0.7));
+  if (run.roster.some((e) => e.sp === sp)) {
+    // schon im Team -> stattdessen EP-Bonus
+    for (const e of run.roster) awardExp(e, 60, levelups);
+    return;
+  }
+  const legend = mkEntry(sp, lvl);
+  const other = recruitOffers(1)[0];
+  const cards = [recruitCard(legend)];
+  if (other) cards.push(recruitCard(other));
+  const i = await showChoice({
+    title: "★ Legendäre Belohnung!",
+    sub: `${SPECIES[sp].name} ist beeindruckt von deiner Stärke und will sich anschließen!`,
+    cards,
+    skipLabel: "Ablehnen (+60 EP für alle)",
+  });
+  if (i === -1) { for (const e of run.roster) awardExp(e, 60, levelups); }
+  else { Sfx.champion(); run.roster.push(i === 0 ? legend : other); }
   writeSave();
 }
 
@@ -1162,7 +1303,8 @@ async function startBattle() {
     writeSave();
 
     const lines = [
-      elite ? `<div class="res-line evo">⭐ <b>ELITE bezwungen!</b> 1,5× Beute + Relikt-Wahl</div>` : "",
+      node.type === "legend" ? `<div class="res-line evo">★ <b>LEGENDÄR bezwungen!</b> ${SPECIES[node.legendSp].name} schließt sich an!</div>` : "",
+      elite && node.type !== "legend" ? `<div class="res-line evo">⭐ <b>ELITE bezwungen!</b> 1,5× Beute + Relikt-Wahl</div>` : "",
       `<div class="res-line">⭐ Trupp erhält <b>${exp} EP</b>, Ersatzbank <b>${Math.round(exp / 2)} EP</b> · 🪙 <b>+${coins}</b></div>`,
       `<div class="res-line">💖 Überlebende verschnaufen (+${Math.round(healPct*100)} % KP)</div>`,
       fallenLines,
@@ -1174,6 +1316,7 @@ async function startBattle() {
     $("#result-title").className = "win";
     $("#result-body").innerHTML = lines.join("");
     Game.onResultNext = async () => {
+      if (node.type === "legend") await offerLegendRecruit(node.legendSp, levelups);
       if (elite) await runRelicChoice();
       await runLevelUpChoices(levelups);
       writeSave();

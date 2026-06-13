@@ -1548,6 +1548,27 @@ const BATTLES = [
 /* Pro Etappe ein Karten-Pool; pro Run wird je eine Karte gewürfelt */
 const STAGE_POOLS = [[0, 7], [1, 8], [2, 9], [3, 10], [4, 11], [5, 12], [6]];
 
+/* ---------- Legendäre Boss-Begegnungen (aus bestehenden Karten gebaut) ---------- */
+const LEGEND_BATTLE = { arktos: 13, zapdos: 14, lavados: 15 };
+(function buildLegendBattles() {
+  const make = (id, base, name, icon, ambient, legendSp, guards) => {
+    const b = BATTLES[base];
+    const pos = b.enemies.map((e) => [e.x, e.y]);
+    const enemies = [{ sp: legendSp, lvl: 9, x: pos[0][0], y: pos[0][1], boss: true }];
+    guards.forEach((g, i) => { const p = pos[(i + 1) % pos.length]; enemies.push({ sp: g, lvl: 7, x: p[0], y: p[1] }); });
+    BATTLES[id] = {
+      id, name, icon, ambient, legend: true,
+      desc: `Ein legendäres Pokémon stellt sich dir!`,
+      intro: `${name} erscheint!
+Besiege es – dann kannst du es rekrutieren.`,
+      partySize: b.partySize, heights: b.heights, terrain: b.terrain, spawns: b.spawns, enemies,
+    };
+  };
+  make(13, 11, "Arktos-Horst", "❄", "storm", "arktos", ["golbat", "habitak"]);
+  make(14, 4, "Zapdos-Sturm", "⚡", "storm", "zapdos", ["magnetilo", "magnetilo"]);
+  make(15, 2, "Lavados-Krater", "🔥", "canyon", "lavados", ["tragosso", "sandan"]);
+})();
+
 /* ---------- Mana ----------
    Attacken kosten Mana statt PP. Start knapp, +MANA_REGEN je eigener Runde. */
 const MANA_START = 1;
@@ -1566,6 +1587,33 @@ function manaCost(m) {
 /* Ab diesem Level wird die Entwicklung angeboten (Reset auf Lv.1!) */
 const EVO_LEVEL = 5;
 /* Pool für Starter, Gefährten und Rekruten */
+/* ---------- Seltenheit (für Rekruten/Shop, tiefenabhängig) ---------- */
+const LEGENDARIES = ["arktos", "zapdos", "lavados"];
+const RARITY = {
+  // common = frühe Basisformen
+  pikachu:"common", glumanda:"common", schiggy:"common", bisasam:"common", evoli:"common",
+  machollo:"common", abra:"common", nebulak:"common", kleinstein:"common", tragosso:"common",
+  fukano:"common", menki:"common", knofensa:"common", sterndu:"common", voltobal:"common",
+  sleima:"common", karpador:"common", vulpix:"common", enton:"common", quapsel:"common",
+  ponita:"common", flegmon:"common", krabby:"common", owei:"common", mauzi:"common",
+  digda:"common", dratini:"common",
+  // uncommon = 2. Stufe & solide Solokämpfer
+  raichu:"uncommon", glutexo:"uncommon", schillok:"uncommon", bisaknosp:"uncommon",
+  maschock:"uncommon", kadabra:"uncommon", alpollo:"uncommon", georok:"uncommon", relaxo:"uncommon",
+  arkani:"uncommon", rasaff:"uncommon", ultrigaria:"uncommon", starmie:"uncommon", lektrobal:"uncommon",
+  sleimok:"uncommon", vulnona:"uncommon", entoron:"uncommon", quaputzi:"uncommon", gallopa:"uncommon",
+  lahmus:"uncommon", kingler:"uncommon", kokowei:"uncommon", snobilikat:"uncommon", digdri:"uncommon",
+  dragonir:"uncommon", elektek:"uncommon", magmar:"uncommon", kicklee:"uncommon", nockchan:"uncommon",
+  tauros:"uncommon", pinsir:"uncommon", chaneira:"uncommon", sichlor:"uncommon",
+  // rare = Endstufen & Eeveelutionen
+  glurak:"rare", turtok:"rare", bisaflor:"rare", simsala:"rare", machomei:"rare", gengar:"rare",
+  geowaz:"rare", sarzenia:"rare", quappo:"rare", garados:"rare", dragoran:"rare",
+  rossana:"rare", lapras:"rare", aquana:"rare", blitza:"rare", flamara:"rare",
+  // legend
+  arktos:"legend", zapdos:"legend", lavados:"legend",
+};
+function rarityOf(sp) { return RARITY[sp] || "common"; }
+
 const PLAYER_POOL = ["pikachu","glumanda","schiggy","bisasam","evoli","machollo","abra","nebulak","kleinstein",
                      "fukano","menki","knofensa","sterndu","voltobal","sleima","karpador",
                      "vulpix","enton","quapsel","ponita","flegmon","krabby","owei","mauzi","digda","dratini","sichlor"];
