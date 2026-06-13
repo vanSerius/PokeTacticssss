@@ -45,20 +45,195 @@ function healEntry(e, amount) {
   e.hp = Math.min(entryStats(e).hp, Math.max(1, (e.hp || 0) + amount));
 }
 
+/* ============================================================
+   Verzweigte Weltkarte (Slay-the-Spire-Stil) auf Pergament
+   ============================================================ */
+const MAP_COLS = 4;
+const MAP_ROWS = 12;          // Reihe 0 = Start unten, Reihe 11 = Boss oben
+const MAP_PATHS = 5;
+
+const NODE_META = {
+  battle:   { icon: "⚔", label: "Kampf" },
+  elite:    { icon: "⭐", label: "Elite" },
+  shop:     { icon: "🎏", label: "Pokéshop" },
+  merchant: { icon: "🛒", label: "Händler" },
+  camp:     { icon: "🏕", label: "Lager" },
+  center:   { icon: "🏥", label: "Center" },
+  treasure: { icon: "🎁", label: "Schatz" },
+  boss:     { icon: "👑", label: "Mewtu" },
+};
+const MAP_TIERS = { early: [0, 1, 7, 8], mid: [2, 3, 9, 10], late: [4, 5, 11, 12] };
+
+function mapBattleId(row, elite) {
+  const f = row / (MAP_ROWS - 2);
+  let pool;
+  if (elite) pool = f < 0.5 ? MAP_TIERS.mid : MAP_TIERS.late;
+  else pool = f < 0.34 ? MAP_TIERS.early : f < 0.67 ? MAP_TIERS.mid : MAP_TIERS.late;
+  return sample(pool, 1)[0];
+}
+function mapRowBoost(row) { return Math.floor(row / 3); }
+
+/* deterministischer Jitter pro Knoten-Id */
+function nodeJitter(id) {
+  let h = 0;
+  for (let i = 0; i < id.length; i++) h = (h * 31 + id.charCodeAt(i)) & 0xffff;
+  return (h / 0xffff - 0.5);
+}
+
+function generateMap(loop = 0) {
+  const rows = Array.from({ length: MAP_ROWS }, () => []);
+  const nodes = {};
+  const edges = {};
+  const colNode = Array.from({ length: MAP_ROWS }, () => ({}));
+  let nextId = 0;
+  const ensure = (row, col) => {
+    if (colNode[row][col] !== undefined) return colNode[row][col];
+    const id = "n" + (nextId++);
+    nodes[id] = { id, row, col };
+    edges[id] = [];
+    rows[row].push(id);
+    colNode[row][col] = id;
+    return id;
+  };
+  const bossCol = Math.floor(MAP_COLS / 2);
+  const bossId = ensure(MAP_ROWS - 1, bossCol);
+  nodes[bossId].type = "boss";
+
+  for (let p = 0; p < MAP_PATHS; p++) {
+    let col = Math.floor(Math.random() * MAP_COLS);
+    let prev = ensure(0, col);
+    for (let row = 1; row < MAP_ROWS; row++) {
+      let nc;
+      if (row === MAP_ROWS - 1) nc = bossCol;
+      else { const d = [-1, 0, 1][Math.floor(Math.random() * 3)]; nc = Math.max(0, Math.min(MAP_COLS - 1, col + d)); }
+      const cur = ensure(row, nc);
+      if (!edges[prev].includes(cur)) edges[prev].push(cur);
+      col = nc; prev = cur;
+    }
+  }
+
+  // Eltern bestimmen (für Typ-Constraints)
+  const parents = {};
+  for (const id in edges) for (const c of edges[id]) (parents[c] = parents[c] || []).push(id);
+
+  // Typen zuweisen (Reihe 0 = Kampf, Reihe vor Boss = Lager)
+  for (let row = 0; row < MAP_ROWS - 1; row++) {
+    for (const id of rows[row]) {
+      if (nodes[id].type) continue;
+      if (row === 0) { nodes[id].type = "battle"; continue; }
+      if (row === MAP_ROWS - 2) { nodes[id].type = "camp"; continue; }
+      const ptypes = (parents[id] || []).map((p) => nodes[p].type);
+      const w = {
+        battle: 50,
+        elite: row >= 4 ? 16 : 0,
+        shop: 13,
+        merchant: 11,
+        camp: 8,
+        center: row >= 2 ? 11 : 0,
+        treasure: 7,
+      };
+      if (ptypes.includes("elite")) w.elite = 0;
+      for (const t of ["shop", "merchant", "camp", "center", "treasure"]) if (ptypes.includes(t)) w[t] = Math.round(w[t] * 0.15);
+      let tot = 0; for (const k in w) tot += w[k];
+      let r = Math.random() * tot, pick = "battle";
+      for (const k in w) { r -= w[k]; if (r <= 0) { pick = k; break; } }
+      nodes[id].type = pick;
+    }
+  }
+
+  // Kampf-/Elite-Karten + Positionen
+  const topM = 0.05, botM = 0.055, leftM = 0.17;
+  for (const id in nodes) {
+    const n = nodes[id];
+    if (n.type === "battle" || n.type === "elite") { n.mapId = mapBattleId(n.row, n.type === "elite"); n.elite = n.type === "elite"; }
+    if (n.type === "boss") { n.mapId = 6; }
+    const jit = n.type === "boss" ? 0 : nodeJitter(id) * 0.05;
+    n.nx = n.type === "boss" ? 0.5 : leftM + (n.col + 0.5) / MAP_COLS * (1 - 2 * leftM) + jit;
+    n.nx = Math.max(0.08, Math.min(0.92, n.nx));
+    n.ny = topM + (1 - n.row / (MAP_ROWS - 1)) * (1 - topM - botM);
+  }
+  return { rows, nodes, edges, bossId, loop };
+}
+
+function mapBoost(node) {
+  const run = Game.save.run;
+  return mapRowBoost(node.row) + (node.elite ? 2 : 0) + (run.loop || 0) * 6;
+}
+function availableNodes() {
+  const run = Game.save.run;
+  if (!run.map) return [];
+  if (run.node == null) return run.map.rows[0];
+  return run.map.edges[run.node] || [];
+}
+
+function runDepth() {
+  const run = Game.save.run;
+  const n = run.node != null && run.map ? run.map.nodes[run.node] : null;
+  return (n ? n.row : 0) + (run.loop || 0) * MAP_ROWS;
+}
+
+/* Einen Karten-Knoten betreten */
+async function enterNode(id) {
+  const run = Game.save.run;
+  const n = run.map.nodes[id];
+  Game.pendingNode = id;
+  if (n.type === "battle" || n.type === "elite" || n.type === "boss") {
+    openPartySelect(BATTLES[n.mapId], !!n.elite, id);   // startBattle rückt bei Sieg vor
+    return;
+  }
+  // Nicht-Kampf-Knoten: Ereignis abspielen, dann vorrücken
+  if (n.type === "shop") await runRecruitChoice([]);
+  else if (n.type === "merchant") await eventShop();
+  else if (n.type === "camp") await eventCampfire();
+  else if (n.type === "center") await eventPokecenter();
+  else if (n.type === "treasure") await runRelicChoice();
+  advanceNode(id);
+  renderBattleList();
+  showScreen("#screen-map");
+}
+
+/* Knoten als erledigt markieren und Position setzen */
+function advanceNode(id) {
+  const run = Game.save.run;
+  if (!run.cleared.includes(id)) run.cleared.push(id);
+  run.node = id;
+  run.battleState = null;
+  writeSave();
+}
+
+/* Lagerfeuer: heilen ODER ein Pokémon aufleveln */
+async function eventCampfire() {
+  const run = Game.save.run;
+  const i = await showChoice({
+    title: "🏕 Lagerfeuer",
+    sub: "Das Team rastet. Was tun?",
+    cards: [
+      { icon: "💖", title: "Ausruhen", desc: "Heilt das ganze Team um 50 % der max. KP." },
+      { icon: "📈", title: "Trainieren", desc: "Ein Pokémon erhält +50 EP (mit Verbesserungs-Wahl)." },
+    ],
+  });
+  if (i === 0) {
+    for (const e of run.roster) healEntry(e, Math.round(entryStats(e).hp * 0.5));
+  } else {
+    const t = await pickTarget("📈 Wer trainiert?", "");
+    if (t) { const lv = []; awardExp(t, 50, lv); await runLevelUpChoices(lv); }
+  }
+  writeSave();
+}
+
 /* Alte Runs ohne neue Felder nachrüsten */
 function migrateRun(run) {
   if (!run) return;
   if (!run.relics) run.relics = [];
   if (run.phoenixUsed === undefined) run.phoenixUsed = false;
-  if (!run.eliteIdx) run.eliteIdx = STAGE_POOLS.map((p) => p.length > 1 ? Math.floor(Math.random() * p.length) : -1);
-  if (!run.played) {
-    run.played = [];
-    if (run.battleSeq) {
-      for (let s = 0; s < run.stage; s++) run.played[s] = { id: run.battleSeq[s], elite: false };
-    }
-  }
   if (run.endless === undefined) run.endless = false;
-  if (!run.endlessPlan) run.endlessPlan = {};
+  // Verzweigte Karte nachrüsten (alte lineare Runs erhalten eine frische Karte)
+  if (!run.map) {
+    run.map = generateMap(0);
+    run.node = null;
+    run.cleared = [];
+    run.loop = run.loop || 0;
+  }
 }
 
 function hasRelic(id) {
@@ -66,28 +241,6 @@ function hasRelic(id) {
   return !!(run && run.relics && run.relics.includes(id));
 }
 
-/* Optionen für eine Etappe: [{id, elite}] – nach Kampfstart festgeschrieben */
-const ENDLESS_MAP_IDS = [0, 1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12];
-function stageOptions(stage) {
-  const run = Game.save.run;
-  if (run.played[stage]) return [run.played[stage]];
-  if (stage < STAGE_POOLS.length) {
-    const pool = STAGE_POOLS[stage];
-    if (pool.length === 1) return [{ id: pool[0], elite: false }];
-    return pool.map((id, i) => ({ id, elite: i === run.eliteIdx[stage] }));
-  }
-  // Endlos-Modus: Plan bei Bedarf würfeln
-  if (!run.endlessPlan[stage]) {
-    run.endlessPlan[stage] = { ids: sample(ENDLESS_MAP_IDS, 2), eliteIdx: Math.floor(Math.random() * 2) };
-    writeSave();
-  }
-  const plan = run.endlessPlan[stage];
-  return plan.ids.map((id, i) => ({ id, elite: i === plan.eliteIdx }));
-}
-
-function endlessDepth(stage) {
-  return Math.max(0, stage - (STAGE_POOLS.length - 1));
-}
 
 function avgRosterLvl() {
   const r = Game.save.run.roster;
@@ -198,9 +351,9 @@ function updateTitle() {
   if (best && (best.stage > 0 || best.wins > 0)) {
     rec.classList.remove("hidden");
     rec.textContent = (best.wins > 0
-      ? `🏆 Champion-Siege: ${best.wins} · Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`
-      : `📜 Bester Run: Etappe ${best.stage}/${STAGE_POOLS.length}`)
-      + (best.endless ? ` · 🔥 Endlos-Tiefe ${best.endless}` : "");
+      ? `🏆 Champion-Siege: ${best.wins}`
+      : `📜 Geschaffte Knoten: ${best.stage}`)
+      + (best.endless ? ` · 🔥 Schleife ${best.endless}` : "");
   } else {
     rec.classList.add("hidden");
   }
@@ -218,10 +371,9 @@ async function startNewRun() {
   const starter = offers[i];
   const comps = sample(PLAYER_POOL.filter((s) => s !== starter.sp), 3).map((s) => mkEntry(s, 3));
   Game.save.run = {
-    stage: 0, roster: [starter, ...comps], graveyard: [],
-    coins: 30, sinceEvent: 0, battleState: null,
-    eliteIdx: STAGE_POOLS.map((p) => p.length > 1 ? Math.floor(Math.random() * p.length) : -1),
-    played: [], endless: false, endlessPlan: {},
+    roster: [starter, ...comps], graveyard: [],
+    coins: 30, battleState: null,
+    map: generateMap(0), node: null, cleared: [], loop: 0, endless: false,
     relics: [], phoenixUsed: false,
   };
   writeSave();
@@ -238,11 +390,10 @@ async function startNewRun() {
 function renderBattleList() {
   const run = Game.save.run;
   migrateRun(run);
-  const el = $("#battle-list");
-  el.innerHTML = "";
-  $(".map-head h2").innerHTML = run.endless && run.stage >= STAGE_POOLS.length
-    ? `🔥 Endlos-Tiefe ${endlessDepth(run.stage)} · 🪙 ${run.coins} · 👥 ${run.roster.length}`
-    : `🗺 Etappe ${Math.min(run.stage + 1, STAGE_POOLS.length)}/${STAGE_POOLS.length} · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
+  const loop = run.loop || 0;
+  $(".map-head h2").innerHTML = loop > 0
+    ? `🔥 Schleife ${loop} · 🪙 ${run.coins} · 👥 ${run.roster.length}`
+    : `🗺 Feldzug · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
   // Relikt-Zeile
   const relicRow = $("#relic-row");
   if (run.relics.length) {
@@ -261,66 +412,81 @@ function renderBattleList() {
   } else {
     relicRow.classList.add("hidden");
   }
-  const maxStage = Math.max(run.stage, STAGE_POOLS.length - 1);
-  for (let stage = 0; stage <= maxStage; stage++) {
-    const done = stage < run.stage;
-    const current = stage === run.stage;
-    if (done) {
-      const p = run.played[stage];
-      const b = p ? BATTLES[p.id] : null;
-      const item = document.createElement("div");
-      item.className = "battle-item done";
-      item.innerHTML = `
-        <div class="bi-num">${b ? b.icon : "✅"}</div>
-        <div class="bi-main">
-          <div class="bi-name">${stage + 1}. ${b ? b.name : "Geschafft"}${p && p.elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}</div>
-          <div class="bi-desc">Abgeschlossen</div>
-        </div>
-        <div class="bi-state">✅</div>`;
-      el.appendChild(item);
-      continue;
-    }
-    if (!current) {
-      const item = document.createElement("div");
-      item.className = "battle-item locked";
-      item.innerHTML = `
-        <div class="bi-num">❓</div>
-        <div class="bi-main">
-          <div class="bi-name">${stage + 1}. Unbekannter Weg</div>
-          <div class="bi-desc">Wird nach der nächsten Etappe sichtbar.</div>
-        </div>
-        <div class="bi-state">🔒</div>`;
-      el.appendChild(item);
-      continue;
-    }
-    // Aktuelle Etappe: Weg wählen (oder festgeschriebener Kampf)
-    const options = stageOptions(stage);
-    if (options.length > 1) {
-      const head = document.createElement("div");
-      head.className = "roster-divider";
-      head.textContent = `⚔ Etappe ${stage + 1}: Wähle deinen Weg!`;
-      el.appendChild(head);
-    }
-    for (const opt of options) {
-      const b = BATTLES[opt.id];
-      const weakened = run.battleState && run.battleState.stage === b.id && !!run.battleState.elite === !!opt.elite;
-      const boost = (opt.elite ? 2 : 0) + endlessDepth(stage) * 2 + (endlessDepth(stage) ? 3 : 0);
-      const item = document.createElement("div");
-      item.className = "battle-item" + (opt.elite ? " elite" : "");
-      item.innerHTML = `
-        <div class="bi-num">${b.icon}</div>
-        <div class="bi-main">
-          <div class="bi-name">${stage + 1}. ${b.name}${opt.elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}</div>
-          <div class="bi-desc">${weakened ? "⚔ Die Gegner sind bereits verwundet – weiter geht's!"
-            : (opt.elite ? `Gegner +${boost} Level · 1,5× Beute · <b>Relikt-Wahl!</b>` : b.desc)}</div>
-        </div>
-        <div class="bi-state">▶</div>`;
-      item.addEventListener("click", () => { Sfx.select(); openPartySelect(b, opt.elite); });
-      el.appendChild(item);
+  drawMap(run);
+  $("#btn-endquit").classList.toggle("hidden", !run.endless);
+}
+
+/* Verzweigte Karte zeichnen */
+function drawMap(run) {
+  const m = run.map;
+  const avail = new Set(availableNodes());
+  const svg = $("#map-edges");
+  const layer = $("#map-nodes");
+  // Kanten
+  let paths = "";
+  const VW = 1000, VH = VW * (MAP_ROWS ? 3 : 3); // viewBox 1000x3000 (Bild-Seitenverh. 1:3)
+  for (const id in m.edges) {
+    const a = m.nodes[id];
+    for (const cid of m.edges[id]) {
+      const b = m.nodes[cid];
+      const hot = (id === run.node && avail.has(cid)) || (run.node == null && a.row === 0);
+      const lit = run.cleared.includes(id) && run.cleared.includes(cid);
+      const col = hot ? "#ffcb05" : lit ? "#8a6a32" : "#5e4424";
+      const wdt = hot ? 7 : 5;
+      const dash = hot ? "" : ' stroke-dasharray="14 10"';
+      paths += `<line x1="${(a.nx*1000).toFixed(1)}" y1="${(a.ny*3000).toFixed(1)}" x2="${(b.nx*1000).toFixed(1)}" y2="${(b.ny*3000).toFixed(1)}" stroke="${col}" stroke-width="${wdt}" stroke-linecap="round"${dash}/>`;
     }
   }
-  // Endlos-Modus: Run freiwillig beenden
-  $("#btn-endquit").classList.toggle("hidden", !run.endless);
+  // Start-Markierung -> Reihe-0-Knoten
+  for (const id of m.rows[0]) {
+    const a = m.nodes[id];
+    const hot = run.node == null;
+    paths += `<line x1="500" y1="2960" x2="${(a.nx*1000).toFixed(1)}" y2="${(a.ny*3000).toFixed(1)}" stroke="${hot ? "#ffcb05" : "#5e4424"}" stroke-width="${hot ? 7 : 5}" stroke-linecap="round"${hot ? "" : ' stroke-dasharray="14 10"'}/>`;
+  }
+  svg.innerHTML = paths;
+
+  // Knoten
+  layer.innerHTML = "";
+  // Start-Punkt
+  const startEl = document.createElement("div");
+  startEl.className = "map-node n-start" + (run.node == null ? " current" : " done");
+  startEl.style.left = "50%"; startEl.style.top = (2960/3000*100).toFixed(2) + "%";
+  startEl.innerHTML = `🚩<div class="nlabel">Start</div>`;
+  layer.appendChild(startEl);
+
+  let firstAvail = null;
+  for (const id in m.nodes) {
+    const n = m.nodes[id];
+    const meta = NODE_META[n.type] || NODE_META.battle;
+    const isAvail = avail.has(id);
+    const isDone = run.cleared.includes(id);
+    const isCurrent = run.node === id;
+    const el = document.createElement("div");
+    el.className = "map-node n-" + n.type
+      + (isAvail ? " available" : "")
+      + (isDone ? " done" : "")
+      + (isCurrent ? " current" : "")
+      + (!isAvail && !isDone && !isCurrent ? " locked" : "");
+    el.style.left = (n.nx * 100).toFixed(2) + "%";
+    el.style.top = (n.ny * 100).toFixed(2) + "%";
+    let badge = "";
+    if ((n.type === "battle" || n.type === "elite") && BATTLES[n.mapId]) badge = `<div class="nlabel">${meta.label}</div>`;
+    else badge = `<div class="nlabel">${meta.label}</div>`;
+    el.innerHTML = `${meta.icon}${badge}`;
+    if (isAvail) {
+      if (!firstAvail) firstAvail = n;
+      el.addEventListener("click", () => { Sfx.select(); enterNode(id); });
+    }
+    layer.appendChild(el);
+  }
+
+  // an die richtige Stelle scrollen
+  requestAnimationFrame(() => {
+    const sc = $("#map-scroll");
+    if (!sc) return;
+    const targetNy = firstAvail ? firstAvail.ny : (run.node == null ? 0.97 : 0.5);
+    sc.scrollTop = sc.scrollHeight * targetNy - sc.clientHeight * 0.55;
+  });
 }
 
 /* ---------- Roster-Kachel ---------- */
@@ -359,12 +525,13 @@ function renderRoster() {
 }
 
 /* ---------- Trupp-Auswahl ---------- */
-function openPartySelect(battleDef, elite = false) {
+function openPartySelect(battleDef, elite = false, nodeId = Game.pendingNode) {
   Game.pendingBattle = battleDef;
   Game.pendingElite = elite;
+  Game.pendingNode = nodeId;
   Game.selectedParty = [];
   const run = Game.save.run;
-  const weakened = run.battleState && run.battleState.stage === battleDef.id && !!run.battleState.elite === !!elite;
+  const weakened = run.battleState && run.battleState.node === Game.pendingNode;
   $("#party-title").innerHTML = `${battleDef.icon} ${battleDef.name}${elite ? " <span class='elite-badge'>⭐ ELITE</span>" : ""}`;
   const info = $("#party-info");
   const update = () => {
@@ -627,7 +794,7 @@ function playEvolutionAnim(fromSp, toSp) {
 /* ---------- Rekruten-Angebot ---------- */
 async function runRecruitChoice(levelups) {
   const run = Game.save.run;
-  const lvl = Math.max(3, 3 + run.stage - 1);
+  const lvl = Math.max(3, 3 + Math.round(runDepth() * 0.7));
   const inTeam = new Set(run.roster.map((e) => e.sp));
   let pool = RECRUIT_POOL.filter((s) => !inTeam.has(s));
   if (pool.length < 2) pool = RECRUIT_POOL;
@@ -691,7 +858,7 @@ async function eventPokecenter() {
 
 async function eventShop() {
   const run = Game.save.run;
-  const priceMul = 1 + run.stage * 0.08;
+  const priceMul = 1 + runDepth() * 0.05;
   const P = (base) => Math.round(base * priceMul / 5) * 5;
   const allItems = [
     { id: "trank", icon: "🧪", price: P(35), title: "Trank", desc: "Heilt ein Pokémon vollständig.",
@@ -942,28 +1109,26 @@ function processCasualties(battle) {
 
 function saveEnemyState(def, battle) {
   const run = Game.save.run;
-  const old = (run.battleState && run.battleState.stage === def.id) ? run.battleState.enemies : null;
+  const node = Game.pendingNode;
+  const old = (run.battleState && run.battleState.node === node) ? run.battleState.enemies : null;
   const enemies = def.enemies.map((e, i) => {
     const u = battle.units.find((x) => x.enemyIdx === i);
     if (!u) return old ? old[i] : 0;      // war in diesem Versuch gar nicht dabei
     return u.alive ? u.hp : 0;
   });
-  run.battleState = { stage: def.id, elite: !!Game.pendingElite, enemies };
+  run.battleState = { node, enemies };
 }
 
 async function startBattle() {
   const def = Game.pendingBattle;
   const elite = !!Game.pendingElite;
+  const nodeId = Game.pendingNode;
   const party = Game.selectedParty;
   const run = Game.save.run;
-  const clearedStage = run.stage;
-  const depth = endlessDepth(clearedStage);
-  const lvlBoost = (elite ? 2 : 0) + (depth ? 3 + (depth - 1) * 2 : 0);
-  // Weg festschreiben: ab jetzt kein Wechsel mehr
-  run.played[clearedStage] = { id: def.id, elite };
-  writeSave();
-  const enemyState = (run.battleState && run.battleState.stage === def.id && !!run.battleState.elite === elite)
-    ? run.battleState.enemies : null;
+  const node = run.map.nodes[nodeId];
+  const depth = node.row + (run.loop || 0) * MAP_ROWS;
+  const lvlBoost = mapBoost(node);
+  const enemyState = (run.battleState && run.battleState.node === nodeId) ? run.battleState.enemies : null;
   const { result, battle } = await BattleUI.run(def, party, enemyState, run.relics, { lvlBoost });
 
   const fallen = processCasualties(battle);
@@ -978,59 +1143,62 @@ async function startBattle() {
 
   if (result === 1) {
     run.battleState = null;
+    advanceNode(nodeId);
     const rewardMult = elite ? 1.5 : 1;
-    let exp = Math.round(((STAGE_EXP[Math.min(clearedStage, STAGE_EXP.length - 1)] || 150) + depth * 40) * rewardMult);
+    let exp = Math.round((100 + depth * 14) * rewardMult);
     if (hasRelic("epanhaenger")) exp = Math.round(exp * 1.2);
-    let coins = Math.round((30 + 12 * Math.min(clearedStage, 6) + depth * 15) * rewardMult);
+    let coins = Math.round((28 + depth * 5) * rewardMult);
     if (hasRelic("gluecksmuenze")) coins = Math.round(coins * 1.4);
     run.coins += coins;
-    if (depth) Game.save.best.endless = Math.max(Game.save.best.endless || 0, depth);
     const levelups = [];
     for (const entry of run.roster) {
       awardExp(entry, party.includes(entry) ? exp : Math.round(exp / 2), levelups);
     }
-    // Verschnaufpause: Überlebende heilen 25 % der max. KP (Wundsalbe: +10 %)
     const healPct = 0.25 + (hasRelic("wundsalbe") ? 0.10 : 0);
     for (const entry of run.roster) {
       if (party.includes(entry)) healEntry(entry, Math.round(entryStats(entry).hp * healPct));
     }
-    const finale = !!def.finale && clearedStage === STAGE_POOLS.length - 1;
-    run.stage = clearedStage + 1;
-    Game.save.best.stage = Math.max(Game.save.best.stage, run.stage);
+    const finale = node.type === "boss";
     writeSave();
 
     const lines = [
       elite ? `<div class="res-line evo">⭐ <b>ELITE bezwungen!</b> 1,5× Beute + Relikt-Wahl</div>` : "",
       `<div class="res-line">⭐ Trupp erhält <b>${exp} EP</b>, Ersatzbank <b>${Math.round(exp / 2)} EP</b> · 🪙 <b>+${coins}</b></div>`,
-      `<div class="res-line">💖 Überlebende verschnaufen (+25 % KP)</div>`,
+      `<div class="res-line">💖 Überlebende verschnaufen (+${Math.round(healPct*100)} % KP)</div>`,
       fallenLines,
     ];
     if (levelups.length) lines.push(`<div class="res-line">📈 <b>${levelups.length} Level-Up${levelups.length > 1 ? "s" : ""}</b> – gleich wählst du Verbesserungen!</div>`);
-    if (finale) lines.push(`<div class="res-line evo">👑 <b>Mewtu ist bezwungen – dein Run ist geschafft!</b></div>`);
+    if (finale) lines.push(`<div class="res-line evo">👑 <b>Mewtu ist bezwungen!</b></div>`);
 
-    $("#result-title").textContent = "🏆 Sieg!";
+    $("#result-title").textContent = finale ? "👑 Champion!" : "🏆 Sieg!";
     $("#result-title").className = "win";
     $("#result-body").innerHTML = lines.join("");
     Game.onResultNext = async () => {
       if (elite) await runRelicChoice();
-      if (!finale) await runRecruitChoice(levelups);
       await runLevelUpChoices(levelups);
-      if (!finale) await maybeRandomEvent();
       writeSave();
       if (finale) {
         Game.save.best.wins++;
+        Game.save.best.endless = Math.max(Game.save.best.endless || 0, run.loop || 0);
         writeSave();
         Sfx.champion();
         const i = await showChoice({
           title: "👑 CHAMPION!",
           sub: `Mewtu ist bezwungen – Champion-Sieg Nr. <b>${Game.save.best.wins}</b>! Wie soll es weitergehen?`,
           cards: [
-            { icon: "🔥", title: "Endlos-Modus", desc: "Der Run geht weiter: zufällige Karten, immer stärkere Gegner. Wie tief kommst du? (Bestwert wird gespeichert)" },
+            { icon: "🔥", title: "Weiterziehen (Endlos)", desc: "Eine neue, gefährlichere Karte erwartet dich – immer stärkere Gegner. Wie tief kommst du?" },
             { icon: "🏁", title: "Run glorreich beenden", desc: "Zurück zum Titel – Zeit für einen neuen Starter." },
           ],
         });
         if (i === 0) {
+          run.loop = (run.loop || 0) + 1;
           run.endless = true;
+          run.map = generateMap(run.loop);
+          run.node = null;
+          run.cleared = [];
+          run.battleState = null;
+          // Belohnung fürs Weiterziehen: Team voll heilen
+          for (const e of run.roster) e.hp = entryStats(e).hp;
           writeSave();
           renderBattleList();
           showScreen("#screen-map");
@@ -1054,16 +1222,15 @@ async function startBattle() {
   writeSave();
 
   if (run.roster.length === 0) {
-    // Niemand mehr übrig -> Run ist wirklich vorbei
-    Game.save.best.stage = Math.max(Game.save.best.stage, run.stage);
+    Game.save.best.stage = Math.max(Game.save.best.stage, run.cleared.length);
     Game.save.run = null;
     writeSave();
     $("#result-title").textContent = "💀 Run beendet";
     $("#result-title").className = "lose";
     $("#result-body").innerHTML = `
-      <div class="res-line">Dein letztes Pokémon ist in <b>Etappe ${clearedStage + 1}</b> gefallen.</div>
-      <div class="res-line">Bester Run: <b>Etappe ${Game.save.best.stage}/${STAGE_POOLS.length}</b>${Game.save.best.wins ? ` · 👑 Siege: <b>${Game.save.best.wins}</b>` : ""}</div>
-      <div class="res-line">Jeder Run ist anders: neuer Starter, neue Rekruten, neue Karten. Versuch's gleich nochmal!</div>`;
+      <div class="res-line">Dein letztes Pokémon ist gefallen.</div>
+      <div class="res-line">Geschaffte Knoten: <b>${run.cleared.length}</b>${Game.save.best.wins ? ` · 👑 Siege: <b>${Game.save.best.wins}</b>` : ""}</div>
+      <div class="res-line">Jeder Run ist anders: neuer Starter, neue Rekruten, neue Wege. Versuch's gleich nochmal!</div>`;
     Game.onResultNext = () => { updateTitle(); showScreen("#screen-title"); };
     showScreen("#screen-result");
     return;
@@ -1077,7 +1244,7 @@ async function startBattle() {
       ${fallenLines}
       <div class="res-line">Noch <b>${left} Gegner</b> übrig – sie behalten ihre Wunden!</div>
       <div class="res-line">Dir bleiben <b>${run.roster.length} Pokémon</b>. Stell den nächsten Trupp auf!</div>`;
-    Game.onResultNext = () => { renderBattleList(); openPartySelect(def, elite); };
+    Game.onResultNext = () => { renderBattleList(); openPartySelect(def, elite, nodeId); };
     showScreen("#screen-result");
   } else {
     // Flucht

@@ -16,13 +16,12 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Status-Effekte**: Brand, Gift, Paralyse, Schlaf – plus Buffs & Debuffs
 - **Roguelike-Runs**: Starter-Wahl (1 aus 3), nach jedem Sieg Rekruten-Wahl (1 aus 2 oder ablehnen für EP), bei jedem Level-Up 1 aus 3 Verbesserungs-Karten (neue Attacke, +KP/ANG/VER/Tempo/Bewegung)
 - **Permadeath & Rückschläge**: Wer im Kampf fällt, ist tot (Pokécenter/Beleber können wiederbeleben). KP bleiben zwischen Kämpfen erhalten. Wird der Trupp besiegt, tritt der nächste gegen die **verwundeten Gegner** an – der Run endet erst, wenn niemand mehr lebt
-- **Zufallsbegegnungen** alle 2–3 Etappen: Pokécenter, Wanderhändler (Münz-Shop inkl. Relikt-Beutel), Lagerfeuer, Relikt-Schrein, Trainings-Dojo, mysteriöses Ei, Mauzi-Casino, verfluchter Altar
-- **Relikte**: 10 passive Run-Items (Phönixfeder, Dornenpanzer, Mana-Kristall, Glücksmünze …) – Wahl nach den Etappen 2/4/6
-- **Wähle deinen Weg**: Vor jeder Etappe zwei Pfade – normal oder ⭐ **ELITE** (Gegner +2 Level, 1,5× Beute, Relikt-Wahl); 13 Karten, ~53 Spezies
+- **Knoten-Begegnungen** auf der Karte: Pokécenter (wiederbeleben), Wanderhändler (Münz-Shop inkl. Relikt-Beutel), Lagerfeuer (heilen oder trainieren), Schatz-Relikte
+- **Relikte**: 10 passive Run-Items (Phönixfeder, Dornenpanzer, Mana-Kristall, Glücksmünze …) – aus Elite-Siegen, Schatz-Knoten und dem Händler
+- **Verzweigte Weltkarte** (Slay-the-Spire-Stil auf Pergament): wähle deinen Pfad durch ⚔ Kämpfe, ⭐ Elite-Kämpfe, 🎏 Pokéshop (Rekrut), 🛒 Händler, 🏕 Lagerfeuer, 🏥 Pokécenter und 🎁 Schatz-Knoten zum Boss; 13 Karten, ~53 Spezies
 - **Entwicklungen bis Stufe 3**: Glumanda→Glutexo→**Glurak**, Turtok, Bisaflor, Simsala, Machomei, Gengar, Geowaz, Sarzenia – jede Entwicklung ist eine Lv.1-Reset-Entscheidung
 - **🔥 Endlos-Modus**: Nach Mewtu weiterkämpfen – zufällige Karten, skalierende Gegner, Tiefen-Rekord
 - **Kampf-Profi-Tools**: Gefahrenzonen-Anzeige per Gegner-Tap, Bewegungs-Undo, antippbare Zugleiste, Kampf-Log
-- **7 Etappen pro Run** inkl. Bosskämpfen (Onix, Rivalen-Team, Mewtu als Finale), **Entwicklungen** (Glumanda → Glutexo …) bleiben erhalten
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
 - **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback
 - **Gelände aus Kenneys „Isometric Landscape"-Pack** ([kenney.nl](https://kenney.nl), CC0) – inkl. eigens getönter Varianten für Spuk-Karten
