@@ -202,7 +202,8 @@ const BattleUI = (() => {
         case "status":
           Sfx.status();
           renderer.addPopup(u.x, u.y, STATUS[ev.st].icon + " " + STATUS[ev.st].name + "!", STATUS[ev.st].color);
-          await renderer.wait(480);
+          if (u.alive) await withTimeout(renderer.animAffliction(u, ev.st), 1000);
+          else await renderer.wait(480);
           break;
         case "buff":
           Sfx.status();
@@ -498,8 +499,9 @@ const BattleUI = (() => {
         log(`<b>${u.name}</b> setzt <b>${m.name}</b> ein`);
         renderer.centerOnTile(pendingTile.x, pendingTile.y);
         const aoe = battle.aoeTiles(currentMove, pendingTile.x, pendingTile.y);
-        await withTimeout(renderer.performAttack(u, currentMove, { x: u.x, y: u.y }, pendingTile, aoe), 4500);
+        await withTimeout(renderer.performAttack(u, currentMove, { x: u.x, y: u.y }, pendingTile, aoe), 5000);
         u.alpha = 1; u.animScale = 1; u.rx = u.x; u.ry = u.y;
+        for (const x of battle.units) { x.lift = 0; x.jitter = 0; }
         const events = battle.resolveAttack(u, currentMove, pendingTile.x, pendingTile.y);
         await playEvents(events);
         acted = true;
@@ -584,8 +586,9 @@ const BattleUI = (() => {
       battle.setFacingTowards(u, decision.action.x, decision.action.y);
       renderer.centerOnTile(decision.action.x, decision.action.y);
       const aoe = battle.aoeTiles(mv, decision.action.x, decision.action.y);
-      await withTimeout(renderer.performAttack(u, mv, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 4500);
+      await withTimeout(renderer.performAttack(u, mv, { x: u.x, y: u.y }, { x: decision.action.x, y: decision.action.y }, aoe), 5000);
       u.alpha = 1; u.animScale = 1; u.rx = u.x; u.ry = u.y;
+      for (const x of battle.units) { x.lift = 0; x.jitter = 0; }
       const events = battle.resolveAttack(u, mv, decision.action.x, decision.action.y);
       await playEvents(events);
       acted = true;

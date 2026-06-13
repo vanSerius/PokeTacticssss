@@ -21,28 +21,28 @@ const MOVE_VFX = {
   geowurf:      { kind: "explosionfx", scale: 1.4, shake: true, perf: "heavy", big: true },
   schnabel:     { kind: "slash", color: "#c7d2fe" },
   fluegelschlag:{ kind: "tornadofx", scale: 1.3 },
-  windstoss:    { kind: "windproj", scale: 1.3 },
-  sternschauer: { kind: "projectile", color: "#fde047", arc: 60, size: 6 },
+  windstoss:    { kind: "windproj", scale: 1.3, perf: "charge", charge: .35 },
+  sternschauer: { kind: "projectile", color: "#fde047", arc: 60, size: 6, perf: "charge", charge: .4 },
   heuler:       { kind: "ring", color: "#cbd5e1" },
   superschall:  { kind: "ring", color: "#e0e7ff" },
   erholung:     { kind: "rise", color: "#86efac" },
   protzer:      { kind: "rise", color: "#fca5a5" },
 
   // Elektro
-  donnerschock: { kind: "bolt" },
-  donnerblitz:  { kind: "bolt" },
+  donnerschock: { kind: "bolt", perf: "charge", charge: .45 },
+  donnerblitz:  { kind: "bolt", perf: "charge", charge: .6 },
   donnerwelle:  { kind: "bolt", color: "#fef9c3" },
-  funkensprung: { kind: "bolt" },
+  funkensprung: { kind: "bolt", perf: "charge", charge: .5 },
 
   // Feuer (Foozle-Fireball + Explosion)
-  glut:         { kind: "fireproj", scale: 1.0, impact: 1.0 },
-  flammenwurf:  { kind: "fireproj", scale: 1.45, impact: 1.5, speed: 430 },
+  glut:         { kind: "fireproj", scale: 1.0, impact: 1.0, perf: "charge", charge: .4 },
+  flammenwurf:  { kind: "fireproj", color: "#f97316", perf: "beam", dur: .85 },
   feuerwirbel:  { kind: "explosionfx", scale: 1.2 },
 
   // Wasser (Foozle-Wassergeschoss + Geysir)
-  aquaknarre:   { kind: "waterproj", scale: 1.1 },
-  blubbstrahl:  { kind: "waterproj", scale: 1.35, speed: 300 },
-  hydropumpe:   { kind: "geyserbeam", color: "#3b82f6", width: 14, dur: .7, scale: 1.8 },
+  aquaknarre:   { kind: "waterproj", scale: 1.1, perf: "charge", charge: .35 },
+  blubbstrahl:  { kind: "waterproj", scale: 1.35, speed: 300, perf: "charge", charge: .4 },
+  hydropumpe:   { kind: "geyserbeam", color: "#3b82f6", perf: "beam", dur: .9 },
   panzerschutz: { kind: "ring", color: "#93c5fd" },
 
   // Pflanze
@@ -52,10 +52,10 @@ const MOVE_VFX = {
   schlafpuder:  { kind: "fall", shape: "drop", color: "#d8b4fe", n: 8, dur: .9 },
 
   // Psycho (Foozle-Portal)
-  konfusion:    { kind: "portalfx", scale: 1.2 },
-  psystrahl:    { kind: "beam+ring", color: "#f0abfc", width: 8 },
-  psychokinese: { kind: "portalfx", scale: 1.4 },
-  psychoklinge: { kind: "beam+ring", color: "#e879f9", width: 12, dur: .7 },
+  konfusion:    { kind: "portalfx", scale: 1.2, perf: "lift", color: "#f0abfc" },
+  psystrahl:    { kind: "beam+ring", color: "#f0abfc", width: 8, perf: "charge", charge: .5 },
+  psychokinese: { kind: "portalfx", scale: 1.4, perf: "lift", color: "#e879f9" },
+  psychoklinge: { kind: "beam+ring", color: "#e879f9", width: 12, dur: .7, perf: "charge", charge: .55 },
   genesung:     { kind: "rise", color: "#86efac" },
   heilwoge:     { kind: "rise", color: "#86efac", n: 16 },
   barriere:     { kind: "ring", color: "#93c5fd" },
@@ -63,20 +63,20 @@ const MOVE_VFX = {
 
   // Geist (Portal-Einschlag)
   schlecker:    { kind: "slash", color: "#c084fc" },
-  nachtnebel:   { kind: "ghostball", color: "#6d28d9", size: 8, arc: 18 },
-  spukball:     { kind: "ghostball", color: "#a855f7", size: 10, arc: 24 },
+  nachtnebel:   { kind: "ghostball", color: "#6d28d9", size: 8, arc: 18, perf: "orbit" },
+  spukball:     { kind: "ghostball", color: "#a855f7", size: 10, arc: 24, perf: "orbit" },
 
   // Gestein / Boden (Foozle-Felsen & Erdstacheln)
-  steinwurf:    { kind: "rockthrow", color: "#a8a29e", size: 8 },
+  steinwurf:    { kind: "rockthrow", color: "#a8a29e", size: 8, perf: "charge", charge: .4 },
   steinhagel:   { kind: "rocksfx", scale: 1.25 },
   haertner:     { kind: "ring", color: "#d6d3d1" },
   knochenkeule: { kind: "slash", color: "#e7e5e4" },
-  knochmerang:  { kind: "projectile", color: "#e7e5e4", size: 7, arc: 55 },
+  knochmerang:  { kind: "projectile", color: "#e7e5e4", size: 7, arc: 55, perf: "charge", charge: .35 },
   intensitaet:  { kind: "earthspike", scale: 1.3 },
   schaufler:    { kind: "earthspike", scale: 1.4 },
 
   // Gift
-  giftstachel:  { kind: "projectile", color: "#a855f7", size: 6, arc: 30 },
+  giftstachel:  { kind: "projectile", color: "#a855f7", size: 6, arc: 30, perf: "charge", charge: .35 },
   saeure:       { kind: "fall", shape: "drop", color: "#a855f7", n: 7 },
 
   // Typ-Fallbacks
@@ -817,6 +817,10 @@ class IsoRenderer {
       if (perf === "blitz") await this._perfBlitz(attacker, moveId, toTile, aoeTiles, spec);
       else if (perf === "heavy") await this._perfHeavy(attacker, moveId, toTile, aoeTiles, spec);
       else if (perf === "whip") await this._perfWhip(attacker, moveId, fromTile, toTile, aoeTiles, spec);
+      else if (perf === "charge") await this._perfCharge(attacker, moveId, fromTile, toTile, aoeTiles, spec);
+      else if (perf === "beam") await this._perfBeam(attacker, moveId, fromTile, toTile, aoeTiles, spec);
+      else if (perf === "lift") await this._perfLift(attacker, moveId, fromTile, toTile, aoeTiles, spec);
+      else if (perf === "orbit") await this._perfOrbit(attacker, moveId, fromTile, toTile, aoeTiles, spec);
       else if (perf === "cast") {
         await this.animLunge(attacker, toTile.x, toTile.y, .13);
         await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
@@ -907,6 +911,159 @@ class IsoRenderer {
     await this.fxVine(fromTile, toTile, { color: spec.color || "#4ade80" });
     this.fxSlash(toTile, { color: spec.color || "#4ade80", dur: .22 });
     this.shake(4);
+  }
+
+  /* Reaktion des Ziels auf einen neuen Status (Zucken/Sacken/Glut/Schwanken) */
+  animAffliction(u, st) {
+    const c = this._tileCenterWorld(u.x, u.y, this.battle.heightAt(u.x, u.y));
+    if (st === "par") {
+      for (let i = 0; i < 8; i++) {
+        const ang = Math.random() * Math.PI * 2;
+        this.particles.push({ wx: c.x + Math.cos(ang) * 14, wy: c.y - 24 + Math.sin(ang) * 14, vx: Math.cos(ang) * 30, vy: Math.sin(ang) * 30 - 20, life: .35, t: 0, color: "#fde047", size: 1.6 + Math.random() * 1.6, grav: 0 });
+      }
+      return this._tween(560, (k) => { u.jitter = Math.sin(k * 90) * 2.4 * (1 - k); u.flash = Math.floor(k * 14) % 2 === 0; })
+        .then(() => { u.jitter = 0; u.flash = false; });
+    } else if (st === "slp") {
+      return this._tween(620, (k) => { u.lift = -3 * Math.sin(Math.min(1, k) * Math.PI); u.animScale = 1 - 0.06 * Math.sin(Math.min(1, k) * Math.PI); })
+        .then(() => { u.lift = 0; u.animScale = 1; });
+    } else if (st === "brn") {
+      for (let i = 0; i < 8; i++) this.particles.push({ wx: c.x + (Math.random() - .5) * 18, wy: c.y - 14, vx: (Math.random() - .5) * 20, vy: -30 - Math.random() * 30, life: .5, t: 0, color: Math.random() < .5 ? "#fb923c" : "#fde047", size: 2, grav: -30 });
+      return this._tween(420, (k) => { u.flash = Math.floor(k * 8) % 2 === 0; }).then(() => { u.flash = false; });
+    } else if (st === "psn") {
+      for (let i = 0; i < 6; i++) this.particles.push({ wx: c.x + (Math.random() - .5) * 16, wy: c.y - 16, vx: (Math.random() - .5) * 16, vy: -18 - Math.random() * 20, life: .6, t: 0, color: "#c084fc", size: 2.2, grav: -10 });
+      return this._tween(420, (k) => { u.jitter = Math.sin(k * 22) * 1.6 * (1 - k); }).then(() => { u.jitter = 0; });
+    }
+    return this.wait(300);
+  }
+
+  /* Spezial-Cast mit Aufladung: Energie sammelt sich, dann Entladung */
+  async _perfCharge(attacker, moveId, fromTile, toTile, aoeTiles, spec) {
+    const m = MOVES[moveId];
+    const col = spec.color || (TYPES[m.type] ? TYPES[m.type].color : "#fff");
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    const c = this._tileCenterWorld(attacker.x, attacker.y, this.battle.heightAt(attacker.x, attacker.y));
+    const dur = spec.charge || 0.5;
+    if (typeof Sfx !== "undefined") Sfx.charge && Sfx.charge();
+    // konvergierende Energiepartikel + Aufplustern
+    await this._tween(dur * 1000, (k) => {
+      attacker.animScale = 1 + 0.12 * Math.sin(k * Math.PI);
+      if (Math.random() < 0.5) {
+        const ang = Math.random() * Math.PI * 2, rad = 34 * (1 - k) + 8;
+        this.particles.push({
+          wx: c.x + Math.cos(ang) * rad, wy: c.y - 22 + Math.sin(ang) * rad * 0.6,
+          vx: -Math.cos(ang) * rad * 1.6, vy: -Math.sin(ang) * rad * 1.0,
+          life: 0.25, t: 0, color: col, size: 1.6 + Math.random() * 1.8, grav: 0,
+        });
+      }
+    });
+    attacker.animScale = 1;
+    // kurzer Vorstoß + Entladung
+    await this.animLunge(attacker, toTile.x, toTile.y, .14);
+    await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
+  }
+
+  /* Dauerstrahl (Flammenwurf, Hydropumpe): Angreifer stemmt sich gegen den Druck */
+  async _perfBeam(attacker, moveId, fromTile, toTile, aoeTiles, spec) {
+    const m = MOVES[moveId];
+    const col = spec.color || (TYPES[m.type] ? TYPES[m.type].color : "#60a5fa");
+    const dx = toTile.x - attacker.x, dy = toTile.y - attacker.y;
+    const d = Math.hypot(dx, dy) || 1, ux = dx / d, uy = dy / d;
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    const hx = attacker.x, hy = attacker.y;
+    // Rückstoß-Haltung
+    await this._tween(150, (k) => { attacker.rx = hx - ux * 0.18 * k; attacker.ry = hy - uy * 0.18 * k; });
+    // Strahl + zappelnder Rückstoß während der Strahlzeit
+    const beam = this.fxStream(fromTile, toTile, { color: col, dur: spec.dur || 0.75, fire: m.type === "fire" });
+    if (typeof Sfx !== "undefined") Sfx.beam();
+    const t0 = performance.now();
+    await this._tween((spec.dur || 0.75) * 1000, (k) => {
+      attacker.rx = hx - ux * (0.18 + Math.sin(k * 40) * 0.03);
+      attacker.ry = hy - uy * (0.18 + Math.sin(k * 40) * 0.03);
+    });
+    await beam;
+    attacker.rx = hx; attacker.ry = hy;
+  }
+
+  /* Telekinese (Psychokinese, Konfusion): Ziel schwebt empor, zittert, kracht zu Boden */
+  async _perfLift(attacker, moveId, fromTile, toTile, aoeTiles, spec) {
+    const col = spec.color || "#f0abfc";
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    const target = this.battle.unitAt(toTile.x, toTile.y);
+    this.fxRing(toTile, { color: col, dur: 0.5, rings: 3 });
+    if (typeof Sfx !== "undefined") Sfx.chime();
+    if (!target) { await this.animAttackFx(moveId, fromTile, toTile, aoeTiles); return; }
+    // anheben
+    await this._tween(420, (k) => {
+      const e = 1 - Math.pow(1 - k, 2);
+      target.lift = 26 * e;
+      target.jitter = Math.sin(k * 50) * 1.2;
+    });
+    // in der Luft zittern
+    await this._tween(260, (k) => { target.jitter = Math.sin(k * 70) * 2.2; });
+    target.jitter = 0;
+    // zu Boden schmettern
+    if (typeof Sfx !== "undefined") Sfx.rumble();
+    await this._tween(110, (k) => { target.lift = 26 * (1 - k); });
+    target.lift = 0;
+    this.shake(8);
+    await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
+  }
+
+  /* Geister-Orbit (Spukball, Nachtnebel): Schatten umkreisen, bündeln, schleudern */
+  async _perfOrbit(attacker, moveId, fromTile, toTile, aoeTiles, spec) {
+    const col = spec.color || "#a855f7";
+    this.battle.setFacingTowards(attacker, toTile.x, toTile.y);
+    const c = this._tileCenterWorld(attacker.x, attacker.y, this.battle.heightAt(attacker.x, attacker.y));
+    if (typeof Sfx !== "undefined") Sfx.element && Sfx.element("ghost");
+    // umkreisende Schattenwisps, die nach innen spiralen
+    await this._tween(520, (k) => {
+      for (let s = 0; s < 2; s++) {
+        const ang = k * 14 + s * Math.PI;
+        const rad = 30 * (1 - k) + 6;
+        this.particles.push({
+          wx: c.x + Math.cos(ang) * rad, wy: c.y - 22 + Math.sin(ang) * rad * 0.55,
+          vx: 0, vy: 0, life: 0.2, t: 0, color: s ? "#4c1d95" : col, size: 2.2 + Math.random() * 2, grav: 0,
+        });
+      }
+      attacker.animScale = 1 + 0.1 * k;
+    });
+    attacker.animScale = 1;
+    await this.animLunge(attacker, toTile.x, toTile.y, .14);
+    await this.animAttackFx(moveId, fromTile, toTile, aoeTiles);
+  }
+
+  /* Strahl-Effekt: flackernde Flammen-/Wasser-Säule entlang der Linie */
+  fxStream(from, to, opt = {}) {
+    const a = this._wpt(from), b = this._wpt(to);
+    const col = opt.color || "#60a5fa";
+    const dur = opt.dur || 0.75;
+    const fire = !!opt.fire;
+    return this._addFx(dur, (ctx, r, k) => {
+      const z = r.cam.zoom;
+      const p1 = r.worldToScreen(a.x, a.y), p2 = r.worldToScreen(b.x, b.y);
+      const env = Math.min(1, k * 5) * Math.min(1, (1 - k) * 5); // schnelles Auf-/Abklingen
+      const w = (fire ? 13 : 10) * env;
+      ctx.lineCap = "round";
+      // Außenglühen
+      ctx.globalAlpha = 0.4 * env;
+      ctx.strokeStyle = col; ctx.lineWidth = w * 2 * z;
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      // wabernder Kern
+      ctx.globalAlpha = env;
+      ctx.strokeStyle = fire ? "#ffd24a" : "#dff1ff";
+      ctx.lineWidth = w * (0.55 + 0.25 * Math.sin(k * 60)) * z;
+      ctx.beginPath(); ctx.moveTo(p1.x, p1.y); ctx.lineTo(p2.x, p2.y); ctx.stroke();
+      ctx.globalAlpha = 1;
+      // Funken/Spritzer am Auftreffpunkt
+      if (env > 0.4 && Math.random() < 0.8) {
+        this.particles.push({
+          wx: b.x + (Math.random() - .5) * 12, wy: b.y - 18 + (Math.random() - .5) * 12,
+          vx: (Math.random() - .5) * 120, vy: -Math.random() * 130 - 20,
+          life: 0.4, t: 0, color: fire ? (Math.random() < .5 ? "#fb923c" : "#fde047") : col,
+          size: 2 + Math.random() * 2.5, grav: fire ? -40 : 260,
+        });
+      }
+    }, true);
   }
 
   /* Vine-Whip-Effekt: sich verjüngende Ranke mit Peitschen-Bogen */
@@ -1593,9 +1750,10 @@ class IsoRenderer {
     const idleBob = b.active === u
       ? Math.sin(this.time * 4) * 2 * z
       : Math.sin(this.time * 1.8 + u.x * 1.7 + u.y * 2.3) * 0.9 * z;
-    const footY = ground.y + 3 * z - (u.hop || 0) * z + idleBob + (u.koSink || 0) * z;
+    const footY = ground.y + 3 * z - (u.hop || 0) * z + idleBob + (u.koSink || 0) * z - (u.lift || 0) * z;
+    const gx = ground.x + (u.jitter || 0) * z;
     if (u.flash) ctx.globalAlpha = alpha * .35;
-    const { dh } = SpriteCache.draw(ctx, u.species, ground.x - size / 2, footY - size, size, size, side, flip);
+    const { dh } = SpriteCache.draw(ctx, u.species, gx - size / 2, footY - size, size, size, side, flip);
     ctx.globalAlpha = alpha;
     const topY = footY - dh;
 

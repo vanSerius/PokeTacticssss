@@ -263,6 +263,7 @@ const Sfx = (() => {
     beam()   { S("beam", .8) || (tone(160, .35, "sawtooth", .05, 260), noise(.3, .045)); },
     rumble() { S("rumble", .9, .8) || (noise(.4, .13), tone(55, .4, "sine", .12, -15)); },
     chime()  { S("chime", .7) || (tone(880, .14, "sine", .05), tone(1320, .18, "sine", .04, 0, .07)); },
+    charge() { tone(220, .5, "sawtooth", .045, 520); tone(330, .5, "sine", .04, 480, .04); },
     buff()   { S("buff", .7) || tone(700, .15, "square", .05, 200); },
     coins()  { S("coins", .9) || (tone(900, .08, "square", .06), tone(1200, .1, "square", .05, 0, .08)); },
     equip()  { S("equip", .8) || tone(500, .08, "square", .05); },
