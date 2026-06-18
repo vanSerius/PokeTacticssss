@@ -18,10 +18,12 @@ Komplett in Vanilla-HTML/CSS/JS, ohne Build-Schritt, optimiert für Smartphones 
 - **Permadeath & Rückschläge**: Wer im Kampf fällt, ist tot (Pokécenter/Beleber können wiederbeleben). KP bleiben zwischen Kämpfen erhalten. Wird der Trupp besiegt, tritt der nächste gegen die **verwundeten Gegner** an – der Run endet erst, wenn niemand mehr lebt
 - **Knoten-Begegnungen** auf der Karte: Pokécenter (wiederbeleben), Wanderhändler (Münz-Shop inkl. Relikt-Beutel), Lagerfeuer (heilen oder trainieren), Schatz-Relikte
 - **Relikte**: 10 passive Run-Items (Phönixfeder, Dornenpanzer, Mana-Kristall, Glücksmünze …) – aus Elite-Siegen, Schatz-Knoten und dem Händler
-- **Verzweigte Weltkarte** (Slay-the-Spire-Stil auf Pergament): stark verzweigte Pfade durch ⚔ Kämpfe, ⭐ Elite, ✨ Legenden-Bosse, 🎏 Pokéshop (~alle 2 Kämpfe), 🛒 Händler, 🏕 Lagerfeuer, 🏥 Pokécenter und 🎁 Schatz zum Boss
+- **Akt-Struktur**: drei Akte mit eigenem Biom – 🌿 Smaragdwald, 🌋 Aschegebirge, 👑 Geisterzitadelle –, jeweils eigener Gegner-Pool, eingefärbte Karte und ein **Akt-Boss** am Ende (Team-Erholung +40 % beim Übergang)
+- **Mehrphasige Bosse**: Waldtitan (Relaxo), Bergkoloss (Onix) und Champion Mewtu **erwachen** unter 50 % KP – Selbstheilung plus Angriffs-/Verteidigungs-Wut für eine harte zweite Phase
+- **Verzweigte Weltkarte** (Slay-the-Spire-Stil auf Pergament): stark verzweigte Pfade durch ⚔ Kämpfe, ⭐ Elite, ✨ Legenden-Bosse, 🎏 Pokéshop (~alle 2 Kämpfe), 🛒 Händler, 🏕 Lagerfeuer, 🏥 Pokécenter und 🎁 Schatz zum Akt-Boss
 - **Entwicklungen bis Stufe 3**: Glumanda→Glutexo→**Glurak**, Turtok, Bisaflor, Simsala, Machomei, Gengar, Geowaz, Sarzenia – jede Entwicklung ist eine Lv.1-Reset-Entscheidung
 - **Seltenheits-System**: Pokémon nach Häufigkeit gestaffelt – früh nur häufige, ab der Hälfte Stufe 2, spät Endstufen; **legendäre Vögel** als Boss-Knoten, die danach (selten) im Shop erscheinen
-- **🔥 Endlos-Modus**: Nach Mewtu weiterkämpfen – zufällige Karten, skalierende Gegner, Tiefen-Rekord
+- **🔥 Endlos-Modus**: Nach Mewtu weiterkämpfen – die Akte beginnen von vorn, mit immer stärkeren Gegnern und Tiefen-Rekord
 - **Kampf-Profi-Tools**: Gefahrenzonen-Anzeige per Gegner-Tap, Bewegungs-Undo, antippbare Zugleiste, Kampf-Log
 - **Smarte Touch-Steuerung**: Tippen mit Schadensvorschau vor jeder Aktion, Ziehen = Kamera, Pinch = Zoom
 - **Offizielle Pokémon-Sprites** (Gen 5, via [PokeAPI/sprites](https://github.com/PokeAPI/sprites)) inkl. Rücken-Sprites je nach Blickrichtung – mit eingebauter Pixel-Art als Fallback

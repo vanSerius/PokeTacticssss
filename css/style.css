@@ -524,3 +524,9 @@ input[type="range"]::-webkit-slider-thumb {
   box-shadow: 0 0 12px rgba(255,203,5,.55), 0 2px 6px rgba(0,0,0,.6);
   animation: legendPulse 1.8s ease-in-out infinite;
 }
+
+/* ---------- Biom-Tönung der Akt-Karte ---------- */
+.map-inner.act-0::before, .map-inner.act-1::before, .map-inner.act-2::before {
+  content: ""; position: absolute; inset: 0; pointer-events: none; z-index: 1;
+  background: var(--biome-tint, transparent); mix-blend-mode: multiply;
+}
