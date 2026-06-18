@@ -58,6 +58,7 @@ class Battle {
       const hpLeft = enemyState ? enemyState[i] : undefined;
       if (hpLeft !== undefined && hpLeft !== null && hpLeft <= 0) return; // bereits besiegt
       const u = makeUnit(e.sp, e.lvl + this.lvlBoost, 1, e.x, e.y, e.boss);
+      if (e.phase) { u.phaseAt = 0.5; u.phased = false; }
       if (hpLeft !== undefined && hpLeft !== null) u.hp = Math.min(u.hp, hpLeft);
       u.enemyIdx = i;
       this.units.push(u);
@@ -397,6 +398,16 @@ class Battle {
       // Schlafende wachen bei Schaden auf
       t.statuses = t.statuses.filter((s) => s.id !== "slp");
       events.push({ type: "dmg", unit: t, val: dmg, crit, mult: p.mult, dir: p.dir, guarded: t.guarding });
+      // Mehrphasen-Boss: erwacht bei < Schwelle einmalig (Heilung + Wut)
+      if (t.phaseAt && !t.phased && t.hp > 0 && t.hp <= t.maxHp * t.phaseAt) {
+        t.phased = true;
+        const heal = Math.round(t.maxHp * 0.25);
+        t.hp = Math.min(t.maxHp, t.hp + heal);
+        t.buffs.push({ stat: "atk", mult: 1.3, dur: 99 });
+        t.buffs.push({ stat: "def", mult: 1.2, dur: 99 });
+        t.statuses = t.statuses.filter((s) => s.id !== "par" && s.id !== "slp");
+        events.push({ type: "phase", unit: t, heal });
+      }
       // Rückstoß: kräftige Attacken schleudern das Ziel zurück
       if (m.knock && t.hp > 0) {
         const ev = events[events.length - 1];

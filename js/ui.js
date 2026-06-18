@@ -223,6 +223,20 @@ const BattleUI = (() => {
           renderer.addPopup(u.x, u.y, "Aufgewacht!", "#fde047");
           await renderer.wait(420);
           break;
+        case "phase": {
+          renderer.shake(12);
+          renderer.fxRing({ x: u.x, y: u.y }, { color: "#ef4444", dur: .9, rings: 4 });
+          renderer.riseBurst(u.x, u.y, "#ff5252", 16);
+          renderer.addPopup(u.x, u.y, "💢 " + u.name + " erwacht!", "#ef4444", true);
+          renderer.addPopup(u.x, u.y, "+" + ev.heal + " · ANG ▲", "#fca5a5");
+          log(`💢 <b>${u.name}</b> entfesselt seine wahre Kraft! (+${ev.heal} KP, Angriff steigt)`);
+          if (typeof Sfx !== "undefined") Sfx.boss();
+          if (navigator.vibrate) try { navigator.vibrate([30, 40, 30]); } catch (e) {}
+          await withTimeout(renderer.animFlash(u, 600), 1200);
+          updateTurnOrder();
+          showUnitCard(battle.active);
+          break;
+        }
         case "thorns":
           Sfx.status();
           renderer.addPopup(u.x, u.y, `🌵 -${ev.val}`, "#a3e635");

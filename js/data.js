@@ -1326,7 +1326,7 @@ const BATTLES = [
       { sp: "alpollo", lvl: 8, x: 7, y: 3 },
       { sp: "onix",    lvl: 8, x: 4, y: 2 },
       { sp: "magnetilo", lvl: 8, x: 5, y: 2 },
-      { sp: "mewtu",   lvl: 10, x: 4, y: 4, boss: true },
+      { sp: "mewtu",   lvl: 10, x: 4, y: 4, boss: true, phase: true },
     ],
     exp: 250,
   },
@@ -1567,6 +1567,28 @@ Besiege es – dann kannst du es rekrutieren.`,
   make(13, 11, "Arktos-Horst", "❄", "storm", "arktos", ["golbat", "habitak"]);
   make(14, 4, "Zapdos-Sturm", "⚡", "storm", "zapdos", ["magnetilo", "magnetilo"]);
   make(15, 2, "Lavados-Krater", "🔥", "canyon", "lavados", ["tragosso", "sandan"]);
+})();
+
+/* ---------- Akt-Bosse (eigene Begegnungen, aus bestehenden Karten gebaut) ---------- */
+(function buildActBosses() {
+  const make = (id, base, name, icon, ambient, boss, bossLvl, guards, phase) => {
+    const b = BATTLES[base];
+    const pos = b.enemies.map((e) => [e.x, e.y]);
+    const enemies = [{ sp: boss, lvl: bossLvl, x: pos[0][0], y: pos[0][1], boss: true }];
+    if (phase) enemies[0].phase = true;
+    guards.forEach((g, i) => { const p = pos[(i + 1) % pos.length]; enemies.push({ sp: g, lvl: bossLvl - 2, x: p[0], y: p[1] }); });
+    BATTLES[id] = {
+      id, name, icon, ambient, actboss: true,
+      desc: `Der Hüter dieses Landes stellt sich dir!`,
+      intro: `${name} versperrt den Weg!
+Besiege ihn, um den nächsten Abschnitt zu erreichen.`,
+      partySize: b.partySize, heights: b.heights, terrain: b.terrain, spawns: b.spawns, enemies,
+    };
+  };
+  // Akt 1 – Wald: Relaxo-Titan mit Pflanzen-Wächtern
+  make(16, 7, "Waldtitan", "🌳", "meadow", "relaxo", 9, ["ultrigaria", "bisaknosp"], true);
+  // Akt 2 – Gebirge: Onix-Koloss mit Fels-/Elektro-Wächtern
+  make(17, 11, "Bergkoloss", "⛰", "storm", "onix", 11, ["georok", "magnetilo"], true);
 })();
 
 /* ---------- Mana ----------

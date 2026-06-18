@@ -48,8 +48,16 @@ function healEntry(e, amount) {
 /* ============================================================
    Verzweigte Weltkarte (Slay-the-Spire-Stil) auf Pergament
    ============================================================ */
+/* ---------- Akte/Biome: 3 Abschnitte pro Durchlauf, je eigener Boss ---------- */
+const ACTS = [
+  { name: "Smaragdwald",     icon: "🌿", tint: "rgba(60,150,45,.26)",  pool: [0, 1, 7, 8],    bossId: 16, bossName: "Waldtitan",  bossIcon: "🌳" },
+  { name: "Aschegebirge",    icon: "🌋", tint: "rgba(215,95,25,.28)",  pool: [2, 9, 4, 11],   bossId: 17, bossName: "Bergkoloss", bossIcon: "⛰" },
+  { name: "Geisterzitadelle",icon: "👑", tint: "rgba(120,55,215,.30)", pool: [3, 10, 5, 12],  bossId: 6,  bossName: "Mewtu",      bossIcon: "👑" },
+];
+const ACT_COUNT = ACTS.length;
+
 const MAP_COLS = 5;
-const MAP_ROWS = 13;          // Reihe 0 = Start unten, Reihe 12 = Boss oben
+const MAP_ROWS = 9;           // pro Akt: Reihe 0 = Start, Reihe 8 = Akt-Boss
 const MAP_PATHS = 7;
 
 const NODE_META = {
@@ -65,11 +73,8 @@ const NODE_META = {
 };
 const MAP_TIERS = { early: [0, 1, 7, 8], mid: [2, 3, 9, 10], late: [4, 5, 11, 12] };
 
-function mapBattleId(row, elite) {
-  const f = row / (MAP_ROWS - 2);
-  let pool;
-  if (elite) pool = f < 0.45 ? MAP_TIERS.mid : MAP_TIERS.late;
-  else pool = f < 0.32 ? MAP_TIERS.early : f < 0.62 ? MAP_TIERS.mid : MAP_TIERS.late;
+function mapBattleId(row, elite, act = 0) {
+  const pool = ACTS[act] ? ACTS[act].pool : MAP_TIERS.early;
   return sample(pool, 1)[0];
 }
 // Gegner-Verstärkung: die ersten Reihen ganz sanft, danach langsam steigend
@@ -81,7 +86,7 @@ function nodeJitter(id) {
   return (h / 0xffff - 0.5);
 }
 
-function generateMap(loop = 0) {
+function generateMap(loop = 0, act = 0) {
   const rows = Array.from({ length: MAP_ROWS }, () => []);
   const nodes = {};
   const edges = {};
@@ -185,7 +190,7 @@ function generateMap(loop = 0) {
 
   // Genau einen Legenden-Boss-Knoten in der mittleren/oberen Kartenhälfte platzieren
   const legCand = [];
-  for (let row = 4; row <= MAP_ROWS - 4; row++) for (const id of rows[row]) if (nodes[id].type === "battle") legCand.push(id);
+  for (let row = 3; row <= MAP_ROWS - 3; row++) for (const id of rows[row]) if (nodes[id].type === "battle") legCand.push(id);
   if (legCand.length) {
     const lid = legCand[Math.floor(Math.random() * legCand.length)];
     const sp = LEGENDARIES[Math.floor(Math.random() * LEGENDARIES.length)];
@@ -197,20 +202,21 @@ function generateMap(loop = 0) {
   const topM = 0.045, botM = 0.05, leftM = 0.13;
   for (const id in nodes) {
     const n = nodes[id];
-    if (n.type === "battle" || n.type === "elite") { n.mapId = mapBattleId(n.row, n.type === "elite"); n.elite = n.type === "elite"; }
+    if (n.type === "battle" || n.type === "elite") { n.mapId = mapBattleId(n.row, n.type === "elite", act); n.elite = n.type === "elite"; }
     if (n.type === "legend") { n.mapId = LEGEND_BATTLE[n.legendSp]; }
-    if (n.type === "boss") { n.mapId = 6; }
+    if (n.type === "boss") { const A = ACTS[act] || ACTS[ACT_COUNT - 1]; n.mapId = A.bossId; n.icon = A.bossIcon; n.label = A.bossName; }
     const jit = n.type === "boss" ? 0 : nodeJitter(id) * 0.04;
     n.nx = n.type === "boss" ? 0.5 : leftM + (n.col + 0.5) / MAP_COLS * (1 - 2 * leftM) + jit;
     n.nx = Math.max(0.07, Math.min(0.93, n.nx));
     n.ny = topM + (1 - n.row / (MAP_ROWS - 1)) * (1 - topM - botM);
   }
-  return { rows, nodes, edges, bossId, loop };
+  return { rows, nodes, edges, bossId, loop, act };
 }
 
 function mapBoost(node) {
   const run = Game.save.run;
-  return mapRowBoost(node.row) + (node.elite ? 2 : 0) + (node.type === "legend" ? 2 : 0) + (run.loop || 0) * 6;
+  return mapRowBoost(node.row) + (node.elite ? 2 : 0) + (node.type === "legend" ? 2 : 0)
+       + (run.act || 0) + (run.loop || 0) * (ACT_COUNT * 3);
 }
 function availableNodes() {
   const run = Game.save.run;
@@ -222,7 +228,7 @@ function availableNodes() {
 function runDepth() {
   const run = Game.save.run;
   const n = run.node != null && run.map ? run.map.nodes[run.node] : null;
-  return (n ? n.row : 0) + (run.loop || 0) * MAP_ROWS;
+  return (n ? n.row : 0) + (run.act || 0) * MAP_ROWS + (run.loop || 0) * ACT_COUNT * MAP_ROWS;
 }
 
 /* Einen Karten-Knoten betreten */
@@ -280,12 +286,15 @@ function migrateRun(run) {
   if (!run.relics) run.relics = [];
   if (run.phoenixUsed === undefined) run.phoenixUsed = false;
   if (run.endless === undefined) run.endless = false;
-  // Verzweigte Karte nachrüsten (alte lineare Runs erhalten eine frische Karte)
-  if (!run.map) {
-    run.map = generateMap(0);
+  if (run.act === undefined) run.act = 0;
+  // Karte nachrüsten / auf neue Akt-Länge migrieren
+  if (!run.map || !run.map.rows || run.map.rows.length !== MAP_ROWS) {
+    run.act = 0;
+    run.map = generateMap(0, 0);
     run.node = null;
     run.cleared = [];
     run.loop = run.loop || 0;
+    run.battleState = null;
   }
 }
 
@@ -443,7 +452,7 @@ async function startNewRun() {
   Game.save.run = {
     roster: [starter, ...comps], graveyard: [],
     coins: 30, battleState: null,
-    map: generateMap(0), node: null, cleared: [], loop: 0, endless: false,
+    act: 0, map: generateMap(0, 0), node: null, cleared: [], loop: 0, endless: false,
     relics: [], phoenixUsed: false,
   };
   writeSave();
@@ -461,9 +470,11 @@ function renderBattleList() {
   const run = Game.save.run;
   migrateRun(run);
   const loop = run.loop || 0;
-  $(".map-head h2").innerHTML = loop > 0
-    ? `🔥 Schleife ${loop} · 🪙 ${run.coins} · 👥 ${run.roster.length}`
-    : `🗺 Feldzug · 🪙 ${run.coins} · 👥 ${run.roster.length}`;
+  const A = ACTS[run.act || 0] || ACTS[0];
+  $("#screen-map .map-head h2").innerHTML =
+    `${A.icon} ${A.name} <span style="opacity:.7;font-size:.8rem">Akt ${(run.act||0)+1}/${ACT_COUNT}${loop>0?" · 🔥"+loop:""}</span><br><span style="font-size:.8rem;opacity:.8">🪙 ${run.coins} · 👥 ${run.roster.length}</span>`;
+  const inner = document.querySelector("#map-inner");
+  if (inner) { inner.className = "map-inner act-" + (run.act || 0); inner.style.setProperty("--biome-tint", A.tint); }
   // Relikt-Zeile
   const relicRow = $("#relic-row");
   if (run.relics.length) {
@@ -539,10 +550,9 @@ function drawMap(run) {
       + (!isAvail && !isDone && !isCurrent ? " locked" : "");
     el.style.left = (n.nx * 100).toFixed(2) + "%";
     el.style.top = (n.ny * 100).toFixed(2) + "%";
-    let badge = "";
-    if ((n.type === "battle" || n.type === "elite") && BATTLES[n.mapId]) badge = `<div class="nlabel">${meta.label}</div>`;
-    else badge = `<div class="nlabel">${meta.label}</div>`;
-    el.innerHTML = `${meta.icon}${badge}`;
+    const icon = n.icon || meta.icon;
+    const label = n.label || meta.label;
+    el.innerHTML = `${icon}<div class="nlabel">${label}</div>`;
     if (isAvail) {
       if (!firstAvail) firstAvail = n;
       el.addEventListener("click", () => { Sfx.select(); enterNode(id); });
@@ -865,8 +875,9 @@ function playEvolutionAnim(fromSp, toSp) {
 /* Fortschritt 0..1 des aktuellen Runs (für Seltenheits-/Stufen-Gating) */
 function runProgress() {
   const run = Game.save.run;
-  const stage = run.node != null && run.map ? run.map.nodes[run.node].row : 0;
-  return Math.min(1, stage / (MAP_ROWS - 2) + (run.loop || 0));
+  const row = run.node != null && run.map ? run.map.nodes[run.node].row : 0;
+  const act = run.act || 0;
+  return Math.min(1, (act + row / (MAP_ROWS - 2)) / ACT_COUNT + (run.loop || 0));
 }
 
 /* Erlaubte Seltenheiten je Fortschritt: früh nur common, ab Hälfte 2. Stufe, spät Endstufen */
@@ -1267,7 +1278,7 @@ async function startBattle() {
   const party = Game.selectedParty;
   const run = Game.save.run;
   const node = run.map.nodes[nodeId];
-  const depth = node.row + (run.loop || 0) * MAP_ROWS;
+  const depth = node.row + (run.act || 0) * MAP_ROWS + (run.loop || 0) * ACT_COUNT * MAP_ROWS;
   const lvlBoost = mapBoost(node);
   const enemyState = (run.battleState && run.battleState.node === nodeId) ? run.battleState.enemies : null;
   const { result, battle } = await BattleUI.run(def, party, enemyState, run.relics, { lvlBoost });
@@ -1299,7 +1310,9 @@ async function startBattle() {
     for (const entry of run.roster) {
       if (party.includes(entry)) healEntry(entry, Math.round(entryStats(entry).hp * healPct));
     }
-    const finale = node.type === "boss";
+    const isActBoss = node.type === "boss";
+    const isFinal = isActBoss && (run.act >= ACT_COUNT - 1);
+    const finale = isFinal;
     writeSave();
 
     const lines = [
@@ -1310,16 +1323,34 @@ async function startBattle() {
       fallenLines,
     ];
     if (levelups.length) lines.push(`<div class="res-line">📈 <b>${levelups.length} Level-Up${levelups.length > 1 ? "s" : ""}</b> – gleich wählst du Verbesserungen!</div>`);
-    if (finale) lines.push(`<div class="res-line evo">👑 <b>Mewtu ist bezwungen!</b></div>`);
+    if (isFinal) lines.push(`<div class="res-line evo">👑 <b>Mewtu ist bezwungen!</b></div>`);
+    else if (isActBoss) lines.push(`<div class="res-line evo">🏆 <b>${ACTS[run.act].bossName} bezwungen – Akt ${run.act + 1} geschafft!</b></div>`);
 
-    $("#result-title").textContent = finale ? "👑 Champion!" : "🏆 Sieg!";
+    $("#result-title").textContent = isFinal ? "👑 Champion!" : isActBoss ? "🏆 Akt geschafft!" : "🏆 Sieg!";
     $("#result-title").className = "win";
     $("#result-body").innerHTML = lines.join("");
     Game.onResultNext = async () => {
       if (node.type === "legend") await offerLegendRecruit(node.legendSp, levelups);
-      if (elite) await runRelicChoice();
+      if (elite || (isActBoss && !isFinal)) await runRelicChoice();
       await runLevelUpChoices(levelups);
       writeSave();
+      if (isActBoss && !isFinal) {
+        // Nächster Akt: neue Biom-Karte, kurze Erholung
+        run.act += 1;
+        run.map = generateMap(0, run.act);
+        run.node = null; run.cleared = []; run.battleState = null;
+        for (const e of run.roster) healEntry(e, Math.round(entryStats(e).hp * 0.4));
+        writeSave();
+        const A = ACTS[run.act];
+        await showChoice({
+          title: `${A.icon} ${A.name}`,
+          sub: "Du betrittst einen neuen Abschnitt – das Team erholt sich (+40 % KP).",
+          cards: [{ icon: A.icon, title: `Akt ${run.act + 1}: ${A.name}`, desc: `Neue Gegner, neue Wege und am Ende: ${A.bossName}.` }],
+        });
+        renderBattleList();
+        showScreen("#screen-map");
+        return;
+      }
       if (finale) {
         Game.save.best.wins++;
         Game.save.best.endless = Math.max(Game.save.best.endless || 0, run.loop || 0);
@@ -1336,7 +1367,8 @@ async function startBattle() {
         if (i === 0) {
           run.loop = (run.loop || 0) + 1;
           run.endless = true;
-          run.map = generateMap(run.loop);
+          run.act = 0;
+          run.map = generateMap(0, 0);
           run.node = null;
           run.cleared = [];
           run.battleState = null;
